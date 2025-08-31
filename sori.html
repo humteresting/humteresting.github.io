@@ -3,6 +3,30 @@
 <head>
 <meta charset="UTF-8" />
 <title>Play Sentences!</title>
+<script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6389383019184909"
+     crossorigin="anonymous"></script>
+     <script>
+// 마우스 오른쪽 클릭 메뉴 비활성화
+document.addEventListener('contextmenu', function(event) {
+  event.preventDefault();
+});
+
+// 키보드 F12, Ctrl+Shift+I (개발자 도구 단축키) 차단
+document.addEventListener('keydown', function(event) {
+  // F12
+  if (event.key === 'F12') {
+    event.preventDefault();
+  }
+  // Ctrl + Shift + I
+  if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'i') {
+    event.preventDefault();
+  }
+  // Ctrl + U (소스 보기 단축키) 차단
+  if (event.ctrlKey && event.key.toLowerCase() === 'u') {
+    event.preventDefault();
+  }
+});
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <style>
 body { font-family: Arial, sans-serif; margin:12px; max-width:900px; background:#f5f5f5; color:#222; }
@@ -26,28 +50,7 @@ button:hover, select:hover, input:hover { filter:brightness(0.9); }
 .highlight { background:#ffd54f !important; }
 #ipaProgress { font-size:12px; color:#555; }
 </style>
-<script>
-// 마우스 오른쪽 클릭 메뉴 비활성화
-document.addEventListener('contextmenu', function(event) {
-  event.preventDefault();
-});
 
-// 키보드 F12, Ctrl+Shift+I (개발자 도구 단축키) 차단
-document.addEventListener('keydown', function(event) {
-  // F12
-  if (event.key === 'F12') {
-    event.preventDefault();
-  }
-  // Ctrl + Shift + I
-  if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'i') {
-    event.preventDefault();
-  }
-  // Ctrl + U (소스 보기 단축키) 차단
-  if (event.ctrlKey && event.key.toLowerCase() === 'u') {
-    event.preventDefault();
-  }
-});
-</script>
 </head>
 <body>
 <h1>Play Sentences!</h1>
