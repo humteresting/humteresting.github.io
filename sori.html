@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<title>Play Sentences!</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<style>
+body { font-family: Arial, sans-serif; margin:12px; max-width:900px; background:#f5f5f5; color:#222; }
+.controls { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:16px; align-items:center; position:sticky; top:0; background:#f5f5f5; padding:8px 0; z-index:10; }
+button, select, input { font-size:14px; padding:6px 10px; border-radius:6px; border:1px solid #ddd; background:#fff; cursor:pointer; }
+button:hover, select:hover, input:hover { filter:brightness(0.9); }
+#darkToggle { position:fixed; right:16px; top:16px; background:#555; color:#fff; padding:6px 12px; border-radius:12px; user-select:none; cursor:pointer; font-size:16px; }
+#darkToggle:hover { background:#777; }
+#content { max-width:900px; margin:auto; line-height:1.6; overflow-x:hidden; }
+.sentence-block { background:#fff; padding:16px; margin-bottom:24px; border-radius:8px; border:1px solid #ccc; }
+.sentence-block.highlighted { background:#c8e8c8 !important; }
+.toolbar { display:flex; gap:8px; margin-bottom:12px; align-items:center; }
+.btn { padding:6px 12px; border:none; cursor:pointer; background:#3178c6; color:white; border-radius:6px; font-size:14px; }
+.btn.stop { background:#c63131; }
+.number { font-family:monospace; color:#666; width:40px; user-select:none; }
+.line-wrapper { display:flex; flex-wrap:wrap; gap:12px 18px; }
+.word-block { display:flex; flex-direction:column; align-items:center; user-select:text; white-space:nowrap; cursor:pointer; min-width:50px; border-radius:6px; transition:background-color 0.15s ease-in-out; padding:4px; }
+.word-block:hover { background:#e0e0e0; }
+.word-text { font-size:16px; }
+.word-ipa { font-style:italic; color:#555; font-size:14px; margin-top:2px; }
+.highlight { background:#ffd54f !important; }
+#ipaProgress { font-size:12px; color:#555; }
+</style>
+<script>
+// 마우스 오른쪽 클릭 메뉴 비활성화
+document.addEventListener('contextmenu', function(event) {
+  event.preventDefault();
+});
+
+// 키보드 F12, Ctrl+Shift+I (개발자 도구 단축키) 차단
+document.addEventListener('keydown', function(event) {
+  // F12
+  if (event.key === 'F12') {
+    event.preventDefault();
+  }
+  // Ctrl + Shift + I
+  if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'i') {
+    event.preventDefault();
+  }
+  // Ctrl + U (소스 보기 단축키) 차단
+  if (event.ctrlKey && event.key.toLowerCase() === 'u') {
+    event.preventDefault();
+  }
+});
+</script>
+</head>
+<body>
+<h1>Play Sentences!</h1>
+
+<div class="controls">
+  <button id="btnPlayAll" class="btn">Play All</button>
+  <button id="btnStop" class="btn stop" disabled>Stop</button>
+  <select id="modeSelect">
+    <option value="sentence" selected>문장 하이라이트</option>
+    <option value="word">단어 하이라이트</option>
+  </select>
+  <label for="inputRepeat">반복</label>
+  <input id="inputRepeat" type="number" min="1" value="1" style="width:55px"/>
+  <label for="inputRate">속도</label>
+  <input id="inputRate" type="range" min="0.5" max="1.5" step="0.1" value="1" style="width:100px"/>
+  <input id="inputRateNum" type="number" min="0.5" max="1.5" step="0.1" value="1" style="width:45px"/>
+  <select id="selectVoice" style="min-width:220px"></select>
+  <label for="inputFile">Load Text</label>
+  <input id="inputFile" type="file" accept=".txt" style="display:none"/>
+  <span id="fileInfo"></span>
+  <span id="ipaProgress"></span>
+</div>
+
+<div id="content"></div>
+<button id="darkToggle" style="position:fixed;top:12px;right:12px;cursor:pointer;">🌙</button>
+<!-- 도움말 버튼 -->
+<button id="helpToggle" title="도움말 보기/숨기기" 
+        style="background:#3178c6; color:white; border:none; border-radius:12px; padding:6px 12px; font-size:14px; position:fixed; top:12px; right:60px; cursor:pointer; height:40px;">
+  도움말
+</button>
+
+<!-- 도움말 박스 -->
+<div id="helpBox" style="
+    position:fixed; top:44px; right:60px; 
+    width:300px; max-width:90%; padding:12px; 
+    background:#fff; color:#222; border:1px solid #ccc; border-radius:8px; 
+    box-shadow:0 4px 8px rgba(0,0,0,0.2); font-size:14px; line-height:1.4; 
+    display:none; z-index:20;">
+  <strong>Play Sentences! 도움말</strong>
+  <ol style="padding-left:18px; margin-top:8px;">
+    <li><strong>Load Text</strong> : 텍스트 파일(.txt) 선택 후 문장과 단어를 로드합니다.</li>
+    <li><strong>Play All</strong> : 모든 문장을 처음부터 끝까지 연속 재생합니다.</li>
+    <li><strong>Start This Sentence</strong> : 해당 문장에서 전체 재생을 시작합니다.</li>
+    <li><strong>Play This Sentence</strong> : 해당 문장만 재생합니다.</li>
+    <li><strong>Stop</strong> : 재생 중인 문장/단어를 즉시 중지합니다.</li>
+    <li><strong>Mode</strong> : 문장/단어 단위 하이라이트 선택</li>
+    <li><strong>Repeat</strong> : 단어/문장 반복 횟수 설정</li>
+    <li><strong>Rate</strong> : 재생 속도 조절</li>
+    <li><strong>Voice</strong> : 사용할 음성 선택</li>
+    <li><strong>Dark Mode</strong> : 화면 테마 변경</li>
+  </ol>
+</div>
+
+<script>
+(() => {
+  const helpToggle = document.getElementById("helpToggle");
+  const helpBox = document.getElementById("helpBox");
+
+  // hover만으로 도움말 표시
+  helpToggle.addEventListener("mouseenter", () => { helpBox.style.display = "block"; });
+  helpToggle.addEventListener("mouseleave", () => { helpBox.style.display = "none"; });
+  helpBox.addEventListener("mouseenter", () => { helpBox.style.display = "block"; });
+  helpBox.addEventListener("mouseleave", () => { helpBox.style.display = "none"; });
+})();
+</script>
+
+<script>
+(() => {
+  // DOM Elements
+  const btnPlayAll = document.getElementById("btnPlayAll");
+  const btnStop = document.getElementById("btnStop");
+  const modeSelect = document.getElementById("modeSelect");
+  const inputRepeat = document.getElementById("inputRepeat");
+  const inputRate = document.getElementById("inputRate");
+  const inputRateNum = document.getElementById("inputRateNum");
+  const selectVoice = document.getElementById("selectVoice");
+  const inputFile = document.getElementById("inputFile");
+  const fileInfo = document.getElementById("fileInfo");
+  const content = document.getElementById("content");
+  const darkToggle = document.getElementById("darkToggle");
+  const ipaProgress = document.getElementById("ipaProgress");
+
+  // State
+  let sentences = [];
+  let voices = [], currentVoice = null, currentRate = 1, currentMode = modeSelect.value;
+  let isPlaying = false, currentUtterance = null;
+  let highlight = { sentence:null, word:-1 };
+  let ipaCache = new Map();
+
+  // Load IPA cache from localStorage
+  const savedIPA = localStorage.getItem("ipaCache");
+  if(savedIPA){ try{ ipaCache = new Map(Object.entries(JSON.parse(savedIPA))); ipaProgress.textContent="IPA Loaded: 100%"; }catch{} }
+
+  function saveIPA(){ localStorage.setItem("ipaCache", JSON.stringify(Object.fromEntries(ipaCache))); }
+
+  // SpeechSynthesis voices
+  function loadVoices(){
+    voices = speechSynthesis.getVoices().filter(v=>v.lang.startsWith("en"));
+    if(!voices.length) return setTimeout(loadVoices,100);
+    selectVoice.innerHTML = voices.map((v,i)=>`<option value="${i}">${v.name} (${v.lang})</option>`).join("");
+    currentVoice = voices[0];
+  }
+  speechSynthesis.onvoiceschanged = loadVoices;
+  loadVoices();
+  selectVoice.addEventListener("change",()=>currentVoice=voices[selectVoice.value]);
+  inputRate.addEventListener("input",(e)=>{ currentRate=+e.target.value; inputRateNum.value=currentRate.toFixed(1); });
+  inputRateNum.addEventListener("input",(e)=>{ const v=Math.min(1.5, Math.max(0.5,+e.target.value)); currentRate=v; inputRate.value=v.toFixed(1); inputRateNum.value=v.toFixed(1); });
+  inputRepeat.addEventListener("change",()=>{ if(inputRepeat.value<1) inputRepeat.value=1; });
+  modeSelect.addEventListener("change",()=>currentMode=modeSelect.value);
+
+  // File load
+  inputFile.addEventListener("change", async e=>{
+    if(!e.target.files.length) return;
+    const file = e.target.files[0];
+    fileInfo.textContent = file.name;
+    const text = await file.text();
+    sentences = text.split(/\r?\n/).filter(l=>l.trim());
+    await preloadIPA();
+    renderSentences();
+  });
+
+  async function fetchIPA(word){
+    if(ipaCache.has(word)) return ipaCache.get(word);
+    try{
+      const res = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word.toLowerCase())}`);
+      if(!res.ok) return "–";
+      const data = await res.json();
+      for(const entry of data){
+        if(entry.phonetics){
+          for(const p of entry.phonetics){
+            if(p.text){ ipaCache.set(word,p.text); saveIPA(); return p.text; }
+          }
+        }
+      }
+    }catch{}
+    ipaCache.set(word,"–"); saveIPA(); return "–";
+  }
+
+  async function preloadIPA(){
+    let uniqueWords = new Set();
+    sentences.forEach(s=>s.split(/\s+/).forEach(w=>uniqueWords.add(w.toLowerCase())));
+    const arr = [...uniqueWords];
+    if(!arr.length) return;
+    for(let i=0;i<arr.length;i+=10){
+      await Promise.all(arr.slice(i,i+10).map(fetchIPA));
+      ipaProgress.textContent = `IPA Loaded: ${Math.min(100, Math.round(((i+10)/arr.length)*100))}%`;
+    }
+    ipaProgress.textContent="IPA Loaded: 100%";
+  }
+
+  function createWordBlock(word, ipa, sIdx, wIdx){
+    const block = document.createElement("div"); block.className="word-block"; block.dataset.sentence=sIdx; block.dataset.word=wIdx;
+    const wDiv = document.createElement("div"); wDiv.className="word-text"; wDiv.textContent=word;
+    const iDiv = document.createElement("div"); iDiv.className="word-ipa"; iDiv.textContent=ipa;
+    block.append(wDiv, iDiv);
+    block.onclick = ()=>{ if(isPlaying) stopAll(); playWord(sIdx, wIdx); };
+    return block;
+  }
+
+  function clearHighlights(){
+    if(highlight.sentence!==null){
+      const block = content.children[highlight.sentence];
+      if(block) block.classList.remove("highlighted");
+    }
+    document.querySelectorAll(".highlight").forEach(el=>el.classList.remove("highlight"));
+    highlight = { sentence:null, word:-1 };
+  }
+
+  function scrollToSentence(idx){
+    const block = content.children[idx];
+    if(block) block.scrollIntoView({behavior:'smooth', block:'center'});
+  }
+
+  function renderSentences(){
+    content.innerHTML="";
+    sentences.forEach((sentence, sIdx)=>{
+      const block = document.createElement("div"); block.className="sentence-block"; block.dataset.sentence=sIdx;
+      const toolbar = document.createElement("div"); toolbar.className="toolbar";
+      const playBtn = document.createElement("button"); playBtn.className="btn"; playBtn.textContent="Play This Sentence";
+      playBtn.onclick=()=>{ if(isPlaying) stopAll(); playSentence(sIdx); };
+      const startBtn = document.createElement("button"); startBtn.className="btn"; startBtn.textContent="Start This Sentence";
+      startBtn.onclick=()=>{ if(isPlaying) stopAll(); playSequence(sIdx); };
+      const num = document.createElement("div"); num.className="number"; num.textContent=(sIdx+1).toString().padStart(3,"0");
+      toolbar.append(playBtn, startBtn, num); block.appendChild(toolbar);
+
+      const wrapper = document.createElement("div"); wrapper.className="line-wrapper";
+      const words = sentence.replace(/[.,!?]/g,"").split(/\s+/);
+      words.forEach((w,wIdx)=> wrapper.appendChild(createWordBlock(w, ipaCache.get(w.toLowerCase())||"–", sIdx, wIdx)));
+      block.appendChild(wrapper);
+      content.appendChild(block);
+    });
+  }
+
+  function speak(text, repeat=1, callback=null){
+    if(!isPlaying) return;
+    let count=0;
+    function speakOnce(){
+      if(!isPlaying) return;
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.voice=currentVoice; utter.rate=currentRate;
+      currentUtterance=utter;
+      utter.onend=()=>{
+        if(!isPlaying) return;
+        count++;
+        if(count<repeat) speakOnce();
+        else callback?.();
+      };
+      speechSynthesis.speak(utter);
+    }
+    speakOnce();
+  }
+
+  function playWord(sIdx, wIdx){
+    if(sIdx>=sentences.length) return;
+    const block = content.children[sIdx];
+    const words = sentences[sIdx].replace(/[.,!?]/g,"").split(/\s+/);
+    if(wIdx>=words.length) return;
+    clearHighlights(); block.classList.add("highlighted");
+    highlight.sentence = sIdx; highlight.word=wIdx;
+    const wordBlock = block.querySelector(`.word-block[data-word="${wIdx}"]`);
+    if(wordBlock){ wordBlock.querySelector(".word-text").classList.add("highlight"); wordBlock.querySelector(".word-ipa").classList.add("highlight"); }
+    scrollToSentence(sIdx);
+    isPlaying=true; btnPlayAll.disabled=true; btnStop.disabled=false;
+    speak(words[wIdx], Number(inputRepeat.value), ()=>{ clearHighlights(); stopAll(); });
+  }
+
+  function playSentence(sIdx, callback=null){
+    if(sIdx>=sentences.length){ callback?.(); return; }
+    const block = content.children[sIdx];
+    const words = sentences[sIdx].replace(/[.,!?]/g,"").split(/\s+/);
+    if(currentMode==="sentence"){
+      clearHighlights(); block.classList.add("highlighted"); highlight.sentence=sIdx;
+      scrollToSentence(sIdx);
+      isPlaying=true; btnPlayAll.disabled=true; btnStop.disabled=false;
+      speak(sentences[sIdx], Number(inputRepeat.value), ()=>{
+        clearHighlights();
+        callback?.();
+      });
+    } else { // word mode
+      let wIdx=0;
+      function nextWord(){
+        if(!isPlaying) return;
+        if(wIdx>=words.length){ clearHighlights(); callback?.(); return; }
+        clearHighlights(); block.classList.add("highlighted"); highlight.sentence=sIdx; highlight.word=wIdx;
+        const wordBlock = block.querySelector(`.word-block[data-word="${wIdx}"]`);
+        if(wordBlock){ wordBlock.querySelector(".word-text").classList.add("highlight"); wordBlock.querySelector(".word-ipa").classList.add("highlight"); }
+        scrollToSentence(sIdx);
+        speak(words[wIdx], Number(inputRepeat.value), ()=>{ wIdx++; nextWord(); });
+      }
+      nextWord();
+    }
+  }
+
+  function playSequence(startIdx=0){
+    if(startIdx>=sentences.length) return;
+    isPlaying=true; btnPlayAll.disabled=true; btnStop.disabled=false;
+    let idx = startIdx;
+    function nextSentence(){
+      if(!isPlaying){ clearHighlights(); return; }
+      if(idx>=sentences.length){ stopAll(); return; }
+      playSentence(idx, ()=>{ idx++; nextSentence(); });
+    }
+    nextSentence();
+  }
+
+  function stopAll(){
+    isPlaying=false; speechSynthesis.cancel(); clearHighlights();
+    btnPlayAll.disabled=false; btnStop.disabled=true;
+  }
+
+  btnPlayAll.addEventListener("click", ()=>{ if(sentences.length) playSequence(0); });
+  btnStop.addEventListener("click", stopAll);
+  darkToggle.addEventListener("click", ()=>{ document.body.classList.toggle("dark"); darkToggle.textContent=document.body.classList.contains("dark")?"☀️":"🌙"; });
+})();
+</script>
+</body>
+</html>
