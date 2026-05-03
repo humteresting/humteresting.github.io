@@ -1,0 +1,3 @@
+﻿[submodule "web_ipa_english"]
+    path = web_ipa_english
+    url = https://github.com/humteresting/web_ipa_english.git
