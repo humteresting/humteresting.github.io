@@ -25,6 +25,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          persist-credentials: false
           submodules: false
 
       - name: Checkout private submodules
@@ -41,11 +42,7 @@ jobs:
 
           SUBMODULES_TOKEN="$(printf '%s' "${SUBMODULES_TOKEN}" | tr -d '\r\n')"
 
-          cat > ~/.netrc <<EOF
-          machine github.com
-          login x-access-token
-          password ${SUBMODULES_TOKEN}
-          EOF
+          printf 'machine github.com\nlogin x-access-token\npassword %s\n' "${SUBMODULES_TOKEN}" > ~/.netrc
           chmod 600 ~/.netrc
 
           git submodule update --init --recursive
