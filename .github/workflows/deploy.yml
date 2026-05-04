@@ -44,7 +44,7 @@ jobs:
 
           git submodule sync --recursive
           git config --global credential.helper store
-          printf 'https://x-access-token:%s@github.com\n' "${SUBMODULES_TOKEN}" > ~/.git-credentials
+          printf 'https://humteresting:%s@github.com\n' "${SUBMODULES_TOKEN}" > ~/.git-credentials
           git submodule update --init --recursive
 
       - name: Build static site
