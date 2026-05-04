@@ -40,11 +40,11 @@ jobs:
             exit 1
           fi
 
-          SUBMODULES_TOKEN="$(printf '%s' "${SUBMODULES_TOKEN}" | tr -d '\r\n')"
+          SUBMODULES_TOKEN="$(printf '%s' "${SUBMODULES_TOKEN}" | tr -d '[:space:]')"
 
           git submodule sync --recursive
-          git config submodule.web_ipa_english.url "https://x-access-token:${SUBMODULES_TOKEN}@github.com/humteresting/web_ipa_english.git"
-          git config submodule.web_value_worldcup.url "https://x-access-token:${SUBMODULES_TOKEN}@github.com/humteresting/web_value_worldcup.git"
+          AUTH="$(printf 'x-access-token:%s' "${SUBMODULES_TOKEN}" | base64 -w 0)"
+          git config --global http.https://github.com/.extraheader "AUTHORIZATION: basic ${AUTH}"
           git submodule update --init --recursive
 
       - name: Build static site
