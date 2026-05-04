@@ -39,7 +39,15 @@ jobs:
             exit 1
           fi
 
-          git config --global url."https://x-access-token:${SUBMODULES_TOKEN}@github.com/".insteadOf "https://github.com/"
+          SUBMODULES_TOKEN="$(printf '%s' "${SUBMODULES_TOKEN}" | tr -d '\r\n')"
+
+          cat > ~/.netrc <<EOF
+          machine github.com
+          login x-access-token
+          password ${SUBMODULES_TOKEN}
+          EOF
+          chmod 600 ~/.netrc
+
           git submodule update --init --recursive
 
       - name: Build static site
