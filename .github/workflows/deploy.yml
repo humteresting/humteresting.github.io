@@ -42,9 +42,9 @@ jobs:
 
           SUBMODULES_TOKEN="$(printf '%s' "${SUBMODULES_TOKEN}" | tr -d '\r\n')"
 
-          printf 'machine github.com\nlogin x-access-token\npassword %s\n' "${SUBMODULES_TOKEN}" > ~/.netrc
-          chmod 600 ~/.netrc
-
+          git submodule sync --recursive
+          git config submodule.web_ipa_english.url "https://x-access-token:${SUBMODULES_TOKEN}@github.com/humteresting/web_ipa_english.git"
+          git config submodule.web_value_worldcup.url "https://x-access-token:${SUBMODULES_TOKEN}@github.com/humteresting/web_value_worldcup.git"
           git submodule update --init --recursive
 
       - name: Build static site
