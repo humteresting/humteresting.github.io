@@ -1,0 +1,78 @@
+name: Deploy Pages
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          submodules: false
+
+      - name: Checkout private submodules
+        shell: bash
+        env:
+          SUBMODULES_TOKEN: ${{ secrets.SUBMODULES_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          if [ -z "${SUBMODULES_TOKEN}" ]; then
+            echo "SUBMODULES_TOKEN secret is required to read private submodules."
+            exit 1
+          fi
+
+          git config --global url."https://x-access-token:${SUBMODULES_TOKEN}@github.com/".insteadOf "https://github.com/"
+          git submodule update --init --recursive
+
+      - name: Build static site
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          rm -rf _site
+          mkdir -p _site/values _site/ipaenglish
+
+          cp ads.txt _site/ads.txt
+          touch _site/.nojekyll
+
+          cp web_value_worldcup/values.html _site/values/index.html
+          cp web_value_worldcup/style.css _site/values/style.css
+          cp web_value_worldcup/app.js _site/values/app.js
+
+          cp web_ipa_english/ipaenglish.html _site/ipaenglish/index.html
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
