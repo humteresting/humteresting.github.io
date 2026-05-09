@@ -6,10 +6,109 @@
   <title>Humteresting</title>
   <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6389383019184909"
      crossorigin="anonymous"></script>
+  <style>
+    :root {
+      color-scheme: light;
+      --bg: #f7f5ef;
+      --ink: #20242d;
+      --muted: #6f746f;
+      --line: #dedbd2;
+      --panel: #fffdf8;
+      --accent: #446b68;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      color: var(--ink);
+      background: var(--bg);
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    main {
+      width: min(920px, calc(100% - 32px));
+      margin: 0 auto;
+      padding: 56px 0;
+    }
+
+    h1 {
+      margin: 0 0 10px;
+      font-size: clamp(32px, 6vw, 56px);
+      line-height: 1.02;
+      letter-spacing: 0;
+    }
+
+    .lead {
+      max-width: 620px;
+      margin: 0 0 28px;
+      color: var(--muted);
+      font-size: 17px;
+      line-height: 1.65;
+    }
+
+    .links {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px;
+    }
+
+    a {
+      display: block;
+      min-height: 148px;
+      padding: 18px;
+      color: inherit;
+      text-decoration: none;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      transition: 160ms ease;
+    }
+
+    a:hover,
+    a:focus-visible {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+      outline: none;
+    }
+
+    strong {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 20px;
+      line-height: 1.25;
+    }
+
+    span {
+      display: block;
+      color: var(--muted);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+  </style>
 </head>
 <body>
-  <a href="/values/">Value World Cup</a>
-  <a href="/ipaenglish/">Play Sentences</a>
+  <main>
+    <h1>Humteresting</h1>
+    <p class="lead">작게 만들어 둔 웹 도구들을 모아 둔 페이지입니다. 필요한 페이지를 골라 바로 열 수 있습니다.</p>
+
+    <div class="links" aria-label="하위 페이지 목록">
+      <a href="/values/">
+        <strong>Value World Cup</strong>
+        <span>여러 가치나 선택지를 토너먼트처럼 비교하면서, 지금 더 끌리는 기준을 찾아보는 월드컵 도구입니다.</span>
+      </a>
+      <a href="/ipaenglish/">
+        <strong>Play Sentences</strong>
+        <span>영어 문장을 소리와 발음 중심으로 다뤄 보며 읽기와 말하기 감각을 연습하는 페이지입니다.</span>
+      </a>
+      <a href="/bookmash_ttr/">
+        <strong>독도로독</strong>
+        <span>책을 검색하고, 한 책을 읽은 뒤 이어 읽은 책을 연결해 독서 흐름을 그래프로 탐색하는 책맥 도구입니다.</span>
+      </a>
+    </div>
+  </main>
 </body>
 </html>
-

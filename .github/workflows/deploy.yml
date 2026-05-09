@@ -35,17 +35,15 @@ jobs:
         run: |
           set -euo pipefail
 
-          if [ -z "${SUBMODULES_TOKEN}" ]; then
-            echo "SUBMODULES_TOKEN secret is required to read private submodules."
-            exit 1
-          fi
-
-          SUBMODULES_TOKEN="$(printf '%s' "${SUBMODULES_TOKEN}" | tr -d '[:space:]')"
-
           git submodule sync --recursive
-          git config --global credential.helper store
-          printf 'https://humteresting:%s@github.com\n' "${SUBMODULES_TOKEN}" > ~/.git-credentials
-          git submodule update --init --recursive
+
+          if [ -n "${SUBMODULES_TOKEN}" ]; then
+            SUBMODULES_TOKEN="$(printf '%s' "${SUBMODULES_TOKEN}" | tr -d '[:space:]')"
+            git -c url."https://x-access-token:${SUBMODULES_TOKEN}@github.com/".insteadOf="https://github.com/" \
+              submodule update --init --recursive
+          else
+            git submodule update --init --recursive
+          fi
 
       - name: Build static site
         shell: bash
@@ -53,7 +51,7 @@ jobs:
           set -euo pipefail
 
           rm -rf _site
-          mkdir -p _site/values _site/ipaenglish
+          mkdir -p _site/values _site/ipaenglish _site/bookmash_ttr
 
           cp ads.txt _site/ads.txt
           cp index.html _site/index.html
@@ -67,6 +65,9 @@ jobs:
           cp web_value_worldcup/app.js _site/values/app.js
 
           cp web_ipa_english/ipaenglish.html _site/ipaenglish/index.html
+
+          cp bookmash_ttr/index.html _site/bookmash_ttr/index.html
+          cp bookmash_ttr/bookmesh.html _site/bookmash_ttr/bookmesh.html
 
       - name: Configure Pages
         uses: actions/configure-pages@v5

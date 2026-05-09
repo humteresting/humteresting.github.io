@@ -1,0 +1,3537 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>독도로독-톡톡로 독서 그래프</title>
+  <style>
+    :root {
+      --bg: #f7dfcb;
+      --panel: #fff7ef;
+      --ink: #20242d;
+      --muted: #7f6657;
+      --line: #e4bfa3;
+      --brand: #b97d58;
+      --brand-2: #c99068;
+      --soft: #f3d8c1;
+      --soft-2: #faeadc;
+      --danger: #b42318;
+      --shadow: 0 16px 36px rgba(16, 24, 40, 0.08);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background: var(--bg);
+      font-family: Inter, Pretendard, "Noto Sans KR", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      letter-spacing: 0;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+    }
+
+    .app {
+      min-height: 100vh;
+    }
+
+    .topbar {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      min-height: 66px;
+      padding: 0 28px;
+      background: rgba(247, 223, 203, 0.88);
+      border-bottom: 1px solid rgba(228, 191, 163, 0.85);
+      backdrop-filter: blur(14px);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: max-content;
+      font-weight: 800;
+      font-size: 20px;
+    }
+
+    .mark {
+      width: 34px;
+      height: 34px;
+      display: grid;
+      place-items: center;
+      color: #fff;
+      background: var(--brand);
+      border-radius: 8px;
+      font-weight: 900;
+    }
+
+    .nav {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .help {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .help-button {
+      width: auto;
+      min-width: 74px;
+      height: 40px;
+      display: grid;
+      place-items: center;
+      border: 2px solid var(--brand);
+      border-radius: 999px;
+      padding: 0 14px;
+      color: #fff;
+      background: var(--brand);
+      box-shadow: inset 0 0 0 4px #fff7ef, 0 4px 12px rgba(185, 125, 88, 0.18);
+      font-size: 14px;
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .help-button:hover,
+    .help-button:focus-visible {
+      background: #9f6746;
+      outline: none;
+    }
+
+    .help-popover {
+      position: absolute;
+      top: calc(100% + 10px);
+      right: 0;
+      width: min(340px, calc(100vw - 32px));
+      z-index: 40;
+      padding: 14px;
+      color: var(--ink);
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      transform: translateY(-4px);
+      pointer-events: none;
+      transition: 150ms ease;
+    }
+
+    .help:hover .help-popover,
+    .help:focus-within .help-popover {
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }
+
+    .help-popover strong {
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .help-popover p {
+      margin: 0 0 8px;
+      font-size: 13px;
+      line-height: 1.55;
+    }
+
+    .help-popover p:last-child {
+      margin-bottom: 0;
+    }
+
+    .nav button,
+    .ghost {
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--muted);
+      border-radius: 8px;
+      padding: 9px 12px;
+    }
+
+    .nav button.active,
+    .nav button:hover,
+    .ghost:hover {
+      color: var(--ink);
+      background: #fff;
+      border-color: var(--line);
+    }
+
+    .auth-btn,
+    .primary,
+    .secondary,
+    .danger {
+      min-height: 40px;
+      border-radius: 8px;
+      border: 1px solid transparent;
+      padding: 9px 14px;
+      font-weight: 700;
+    }
+
+    .auth-btn,
+    .primary {
+      color: #fff;
+      background: var(--brand);
+    }
+
+    .secondary {
+      color: var(--brand);
+      background: var(--soft);
+      border-color: #e4bfa3;
+    }
+
+    .danger {
+      color: var(--danger);
+      background: #fff1ec;
+      border-color: #f0b8aa;
+    }
+
+    main {
+      width: min(1180px, calc(100% - 36px));
+      margin: 0 auto;
+      padding: 28px 0 48px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 420px;
+      gap: 30px;
+      align-items: stretch;
+      padding: 38px 0 28px;
+    }
+
+    h1 {
+      margin: 0 0 16px;
+      max-width: 740px;
+      font-size: clamp(36px, 6vw, 68px);
+      line-height: 1.02;
+      letter-spacing: 0;
+    }
+
+    .hero-title-main,
+    .hero-title-sub {
+      display: block;
+    }
+
+    .hero-title-sub {
+      margin-top: 8px;
+      color: var(--muted);
+      font-size: 0.54em;
+      font-weight: 650;
+      line-height: 1.16;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: 24px;
+    }
+
+    h3 {
+      margin: 0 0 10px;
+      font-size: 17px;
+    }
+
+    p {
+      color: var(--muted);
+      line-height: 1.65;
+    }
+
+    .lead {
+      max-width: 680px;
+      margin: 0 0 24px;
+      font-size: 18px;
+    }
+
+    .inline-search-link {
+      border: 0;
+      padding: 0;
+      color: var(--brand);
+      background: transparent;
+      font-weight: 800;
+      text-decoration: underline;
+      text-decoration-thickness: 1px;
+      text-underline-offset: 3px;
+    }
+
+    .inline-search-link:hover,
+    .inline-search-link:focus-visible {
+      color: var(--ink);
+      outline: none;
+    }
+
+    .searchbox {
+      display: flex;
+      gap: 10px;
+      max-width: 720px;
+      padding: 8px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .searchbox input,
+    .field input {
+      width: 100%;
+      min-height: 44px;
+      border: 1px solid transparent;
+      border-radius: 8px;
+      padding: 0 12px;
+      outline: none;
+      background: #fffaf5;
+      color: var(--ink);
+    }
+
+    .searchbox input:focus,
+    .field input:focus {
+      border-color: #9ca3af;
+      background: #fff;
+    }
+
+    .mesh-preview {
+      position: relative;
+      min-height: 310px;
+      overflow: hidden;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .mesh-preview svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+
+    .section {
+      margin-top: 28px;
+    }
+
+    .section-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      margin-bottom: 14px;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 8px 20px rgba(16, 24, 40, 0.04);
+    }
+
+    .path-card {
+      display: grid;
+      gap: 10px;
+    }
+
+    .profile-card {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      align-items: end;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .profile-card label {
+      display: grid;
+      gap: 6px;
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 750;
+    }
+
+    .path-line {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-weight: 800;
+    }
+
+    .arrow {
+      color: var(--brand-2);
+      font-weight: 900;
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .book-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 10px;
+    }
+
+    .book-card {
+      display: grid;
+      grid-template-columns: 78px minmax(0, 1fr) auto;
+      gap: 12px;
+      min-height: 132px;
+      width: 100%;
+      align-items: start;
+      text-align: left;
+    }
+
+    .book-card > span {
+      min-width: 0;
+    }
+
+    .book-card .actions {
+      justify-content: end;
+      min-width: 132px;
+    }
+
+    .cover {
+      width: 78px;
+      height: 112px;
+      display: grid;
+      place-items: center;
+      overflow: hidden;
+      color: #fff;
+      background: linear-gradient(145deg, #b97d58, #ead0bd);
+      border-radius: 6px;
+      font-weight: 900;
+      text-align: center;
+      padding: 8px;
+    }
+
+    .cover img {
+      grid-area: 1 / 1;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    .cover span {
+      grid-area: 1 / 1;
+      display: grid;
+      place-items: center;
+      width: 100%;
+      height: 100%;
+    }
+
+    .book-title {
+      display: block;
+      font-weight: 850;
+      line-height: 1.35;
+      margin-bottom: 6px;
+      overflow-wrap: anywhere;
+    }
+
+    .edition-badge {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      margin: 0 0 6px;
+      padding: 3px 7px;
+      color: #8f5e40;
+      background: #faeadc;
+      border: 1px solid #e4bfa3;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .book-info {
+      display: inline;
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.5;
+      overflow-wrap: anywhere;
+    }
+
+    .page {
+      display: none;
+    }
+
+    .page.active {
+      display: block;
+    }
+
+    .detail-layout {
+      display: grid;
+      grid-template-columns: 220px minmax(0, 1fr);
+      gap: 28px;
+      align-items: start;
+    }
+
+    .detail-cover {
+      width: min(220px, 100%);
+      min-height: 320px;
+      aspect-ratio: 2 / 3;
+      font-size: 28px;
+      background: #fff7ef;
+    }
+
+    .actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 18px;
+    }
+
+    .rating-panel {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+      padding: 12px;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .stars {
+      display: inline-flex;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .star {
+      width: 30px;
+      height: 30px;
+      display: grid;
+      place-items: center;
+      padding: 0;
+      border: 0;
+      color: #c2cad6;
+      background: transparent;
+      font-size: 22px;
+      line-height: 1;
+    }
+
+    .star.active {
+      color: #8f5e40;
+    }
+
+    .star:disabled {
+      cursor: not-allowed;
+      opacity: 0.55;
+    }
+
+    .comments {
+      display: grid;
+      gap: 8px;
+    }
+
+    .comment-form {
+      display: grid;
+      gap: 8px;
+      margin: 0 0 10px;
+    }
+
+    .comment-form textarea {
+      width: 100%;
+      min-height: 48px;
+      resize: vertical;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 10px 12px;
+      color: var(--ink);
+      background: #fffaf5;
+      font: inherit;
+      line-height: 1.5;
+    }
+
+    .comment-form textarea:focus {
+      border-color: #9ca3af;
+      outline: none;
+      background: #fff;
+    }
+
+    .comment {
+      display: grid;
+      gap: 4px;
+      padding: 7px 0;
+      border-top: 1px solid var(--line);
+      color: var(--ink);
+      line-height: 1.55;
+    }
+
+    .comment-line {
+      display: flex;
+      align-items: baseline;
+      gap: 6px;
+      min-width: 0;
+    }
+
+    .reply {
+      position: relative;
+      margin-left: 20px;
+      padding-left: 18px;
+      border-left: 0;
+    }
+
+    .reply::before {
+      content: "ㄴ";
+      position: absolute;
+      left: 0;
+      top: 9px;
+      color: var(--brand-2);
+      font-weight: 900;
+      line-height: 1;
+    }
+
+    .comment-author {
+      flex: 0 0 auto;
+      color: var(--ink);
+      font-weight: 850;
+    }
+
+    .comment-time {
+      flex: 0 0 auto;
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    .comment-body {
+      min-width: 0;
+      color: var(--ink);
+      white-space: pre-line;
+    }
+
+    .comment-hint {
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .split {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .connection {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 12px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .pill {
+      min-width: 42px;
+      text-align: center;
+      padding: 5px 9px;
+      border-radius: 999px;
+      color: var(--brand);
+      background: var(--soft);
+      font-size: 13px;
+      font-weight: 850;
+    }
+
+    .graph-toolbar {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto auto auto;
+      gap: 10px;
+      margin-bottom: 14px;
+    }
+
+    .graph-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      min-height: 42px;
+      padding: 0 12px;
+      color: var(--muted);
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 750;
+      white-space: nowrap;
+    }
+
+    .graph-toggle label {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .graph-wrap {
+      position: relative;
+      height: min(68vh, 680px);
+      min-height: 480px;
+      overflow: hidden;
+      background: #fff;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+    }
+
+    .graph-wrap svg {
+      width: 100%;
+      height: 100%;
+      display: block;
+      touch-action: none;
+      cursor: grab;
+      user-select: none;
+    }
+
+    .graph-wrap svg.is-panning {
+      cursor: grabbing;
+    }
+
+    .node {
+      cursor: pointer;
+    }
+
+    .node circle {
+      transition: 160ms ease;
+    }
+
+    .node text {
+      pointer-events: none;
+      font-size: 13px;
+      font-weight: 800;
+      fill: var(--ink);
+    }
+
+    .node .node-label {
+      font-size: 14px;
+      font-weight: 850;
+    }
+
+    .node .node-label-bg {
+      fill: rgba(255, 255, 255, 0.92);
+      stroke: #e4bfa3;
+      stroke-width: 1px;
+      rx: 5px;
+    }
+
+    .dim {
+      opacity: 0.28;
+    }
+
+    .empty {
+      padding: 24px;
+      color: var(--muted);
+      text-align: center;
+      border: 1px dashed var(--line);
+      border-radius: 8px;
+      background: #fff;
+    }
+
+    .modal {
+      position: fixed;
+      inset: 0;
+      z-index: 50;
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 18px;
+      background: rgba(16, 24, 40, 0.42);
+    }
+
+    .modal.active {
+      display: flex;
+    }
+
+    .modal-panel {
+      width: min(760px, 100%);
+      max-height: 84vh;
+      overflow: auto;
+      background: #fff;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      box-shadow: var(--shadow);
+      padding: 18px;
+    }
+
+    .modal-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 14px;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 20px;
+      z-index: 70;
+      transform: translateX(-50%);
+      display: none;
+      max-width: min(520px, calc(100% - 32px));
+      padding: 12px 14px;
+      color: #fff;
+      background: #20242d;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      white-space: pre-line;
+    }
+
+    .toast.active {
+      display: block;
+    }
+
+    .error-panel {
+      position: fixed;
+      right: 16px;
+      bottom: 82px;
+      z-index: 72;
+      display: none;
+      width: min(520px, calc(100% - 32px));
+      max-height: 42vh;
+      overflow: auto;
+      padding: 14px;
+      color: var(--ink);
+      background: #fff;
+      border: 1px solid #f0b8aa;
+      border-radius: 8px;
+      box-shadow: var(--shadow);
+      white-space: pre-wrap;
+    }
+
+    .error-panel.active {
+      display: block;
+    }
+
+    .error-panel-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+      font-weight: 900;
+    }
+
+    .error-panel pre {
+      margin: 0;
+      color: #713526;
+      font: 12px/1.5 ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
+      white-space: pre-wrap;
+    }
+
+    @media (max-width: 920px) {
+      .hero,
+      .detail-layout,
+      .split {
+        grid-template-columns: 1fr;
+      }
+
+      .grid,
+      .book-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .mesh-preview {
+        min-height: 240px;
+      }
+    }
+
+    @media (max-width: 640px) {
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+        padding: 14px 18px;
+      }
+
+      main {
+        width: min(100% - 24px, 1180px);
+        padding-top: 18px;
+      }
+
+      .searchbox,
+      .graph-toolbar {
+        grid-template-columns: 1fr;
+        display: grid;
+      }
+
+      .graph-toggle {
+        justify-content: center;
+      }
+
+      .book-grid,
+      .grid {
+        grid-template-columns: 1fr;
+      }
+
+      .book-card {
+        grid-template-columns: 66px 1fr;
+      }
+
+      .book-card .actions {
+        grid-column: 1 / -1;
+        justify-content: stretch;
+        min-width: 0;
+      }
+
+      .cover {
+        width: 66px;
+        height: 96px;
+      }
+
+      .graph-wrap {
+        min-height: 420px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header class="topbar">
+      <div class="brand" role="button" tabindex="0" data-route="home">
+        <span class="mark">B</span>
+        <span>BookMesh</span>
+      </div>
+      <nav class="nav" aria-label="주요 메뉴">
+        <button data-route="home" class="active">홈</button>
+        <button data-route="search">검색</button>
+        <button data-route="graph">그래프</button>
+        <button data-route="me">내 정보</button>
+        <button id="authButton" class="auth-btn">Google 로그인</button>
+        <span class="help">
+          <button class="help-button" type="button" aria-label="도움말">도움말</button>
+          <span class="help-popover" role="tooltip">
+            <strong>사용 도움말</strong>
+            <p>검색에서 책 제목, 저자, ISBN을 입력하고 원하는 책을 선택하면 책 정보에 저장됩니다.</p>
+            <p>책 정보에서 “다음에 읽은 책 추가” 또는 “전에 읽은 책 추가”를 눌러 책과 책 사이의 독서 경로를 연결합니다. 경로 추가는 Google 로그인 후 가능합니다.</p>
+            <p>“내 정보” 탭에서 톡토로명을 입력할 수 있고, 내가 추가한 경로를 삭제할 수 있습니다. 다른 사람이 추가한 경로는 삭제되지 않습니다.</p>
+            <p>그래프 화면은 마우스 휠로 확대/축소하고, 빈 공간을 드래그해서 이동합니다. 노드를 누르면 그 책 중심 그래프로 다시 펼쳐집니다.</p>
+            <p>BookMesh는 알라딘 상품 API를 먼저 쓰고, Google Books API와 Open Library API를 보조로 사용합니다.</p>
+            <p>국가서지에는 있는 책도 외부 API에 없거나 늦게 반영되면 검색되지 않을 수 있습니다. 검색이 안 되면 죄송합니다...</p>
+          </span>
+        </span>
+      </nav>
+    </header>
+
+    <main>
+      <section id="homePage" class="page active">
+        <div class="hero">
+          <div>
+            <h1>
+              <span class="hero-title-main">독도로독</span>
+              <span class="hero-title-sub">톡토로 冊脈(책맥)</span>
+            </h1>
+            <p class="lead">독도로독 BookMesh는 톡토로들이 실제로 이어 읽은 흐름을 모아, 한 권의 책에서 다음 책으로 뻗어가는 독서 그래프를 탐색하는 웹앱입니다.</p>
+            <form class="searchbox" data-search-form>
+              <input name="q" autocomplete="off" placeholder="책 제목, 저자, ISBN으로 검색" />
+              <button class="primary" type="submit">검색</button>
+            </form>
+          </div>
+          <div class="mesh-preview" aria-label="독서 그래프 미리보기">
+            <svg id="homeGraphSvg" viewBox="0 0 1000 620" role="img" aria-label="인기 책 중심 그래프"></svg>
+          </div>
+        </div>
+
+        <div class="section">
+          <div class="section-head">
+            <h2>최근 추가된 독서 경로</h2>
+            <button class="ghost" data-route="me">내 정보 보기</button>
+          </div>
+          <div id="recentPaths" class="grid"></div>
+        </div>
+
+        <div class="section">
+          <div class="section-head">
+            <h2>인기 연결</h2>
+            <button class="ghost" data-route="graph">그래프로 보기</button>
+          </div>
+          <div id="popularPaths" class="grid"></div>
+        </div>
+      </section>
+
+      <section id="searchPage" class="page">
+        <div class="section-head">
+          <h2>책 검색</h2>
+          <span class="meta">저장된 책을 먼저 보여주고, 이어서 알라딘·Google Books·Open Library 후보를 함께 보여줍니다.</span>
+        </div>
+        <form class="searchbox" data-search-form>
+          <input name="q" id="searchInput" autocomplete="off" placeholder="예: 여자 둘이 살고 있습니다, 김하나, 황선우, 9791189709815" />
+          <button class="primary" type="submit">검색</button>
+        </form>
+        <div class="section">
+          <div id="searchResults" class="book-grid"></div>
+        </div>
+      </section>
+
+      <section id="bookPage" class="page">
+        <div id="bookDetail"></div>
+      </section>
+
+      <section id="graphPage" class="page">
+        <div class="section-head">
+          <h2>독서 그래프</h2>
+          <span id="graphSummary" class="meta"></span>
+        </div>
+        <div class="graph-toolbar">
+          <div class="field">
+            <input id="graphSearchInput" list="graphBookSuggestions" placeholder="중심 책 검색" autocomplete="off" />
+            <datalist id="graphBookSuggestions"></datalist>
+          </div>
+          <button id="graphSearchButton" class="secondary">책 찾기</button>
+          <button id="expandGraphButton" class="ghost">전체 맞춤</button>
+          <span class="graph-toggle">
+            <label><input type="radio" name="graphMyPathHighlight" value="on" checked /> 내경로강조</label>
+            <label><input type="radio" name="graphMyPathHighlight" value="off" /> 전체</label>
+          </span>
+        </div>
+        <div class="graph-wrap">
+          <svg id="graphSvg" viewBox="0 0 1000 620" aria-label="책 연결 그래프"></svg>
+        </div>
+      </section>
+
+      <section id="mePage" class="page">
+        <div class="section-head">
+          <h2>내 정보</h2>
+          <span id="meSummary" class="meta"></span>
+        </div>
+        <div id="meProfile"></div>
+        <div id="myPaths" class="grid"></div>
+      </section>
+    </main>
+  </div>
+
+  <div id="bookModal" class="modal" aria-hidden="true">
+      <div class="modal-panel">
+        <div class="modal-head">
+        <h2 id="bookModalTitle">다음에 읽은 책 추가</h2>
+        <button class="ghost" data-close-modal>닫기</button>
+      </div>
+      <form class="searchbox" id="modalSearchForm">
+        <input name="q" autocomplete="off" placeholder="연결할 책 검색" />
+        <button class="primary" type="submit">검색</button>
+      </form>
+      <div class="section">
+        <div id="modalResults" class="book-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toast" class="toast" role="status"></div>
+  <div id="errorPanel" class="error-panel" role="alert" aria-live="assertive">
+    <div class="error-panel-head">
+      <span>오류 메시지</span>
+      <span class="actions">
+        <button class="ghost" type="button" data-copy-errors>복사</button>
+        <button class="ghost" type="button" data-clear-errors>닫기</button>
+      </span>
+    </div>
+    <pre id="errorLog"></pre>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-app.js";
+    import { getAnalytics, isSupported as isAnalyticsSupported } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-analytics.js";
+    import {
+      browserLocalPersistence,
+      getAuth,
+      getRedirectResult,
+      GoogleAuthProvider,
+      onAuthStateChanged,
+      setPersistence,
+      signInWithPopup,
+      signInWithRedirect,
+      signOut
+    } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-auth.js";
+    import {
+      collection,
+      deleteDoc,
+      doc,
+      getDoc,
+      getDocs,
+      getFirestore,
+      limit,
+      query,
+      serverTimestamp,
+      setDoc,
+      where
+    } from "https://www.gstatic.com/firebasejs/12.13.0/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyDkkfX1ehNZ9CeUmzIDV6Zn8ahnQkQuH4c",
+      authDomain: "bookmesh-6b6ed.firebaseapp.com",
+      projectId: "bookmesh-6b6ed",
+      storageBucket: "bookmesh-6b6ed.firebasestorage.app",
+      messagingSenderId: "1087519748289",
+      appId: "1:1087519748289:web:d24e6a525880c35cb72440",
+      measurementId: "G-GM1K765D04"
+    };
+
+    const aladinConfig = {
+      ttbKey: "ttbaboutsh0542001",
+      lookupEndpoint: "https://www.aladin.co.kr/ttb/api/ItemLookUp.aspx",
+      searchEndpoint: "https://www.aladin.co.kr/ttb/api/ItemSearch.aspx",
+      corsProxyEndpoints: [
+        { url: "https://api.codetabs.com/v1/proxy?quest=", mode: "encoded", repairText: true },
+        { url: "https://api.allorigins.win/raw?url=", mode: "encoded", repairText: false }
+      ]
+    };
+
+    const firebaseReady = !Object.values(firebaseConfig).some((value) => String(value).startsWith("YOUR_"));
+    const appVersion = "v01";
+    const firebase = firebaseReady
+      ? {
+          app: initializeApp(firebaseConfig),
+          analytics: null,
+          auth: null,
+          db: null,
+          provider: new GoogleAuthProvider()
+        }
+      : null;
+
+    if (firebase) {
+      firebase.auth = getAuth(firebase.app);
+      firebase.db = getFirestore(firebase.app);
+      isAnalyticsSupported()
+        .then((supported) => {
+          if (supported) firebase.analytics = getAnalytics(firebase.app);
+        })
+        .catch(() => {});
+    }
+
+    const currentUser = {
+      id: "demo-user",
+      displayName: "Demo Reader",
+      nickname: "",
+      email: "reader@example.com",
+      photoURL: null,
+      signedIn: false
+    };
+
+    const seedBooks = [];
+
+    const seedEdges = [];
+
+    const state = {
+      books: load("bookmesh.books", seedBooks),
+      edges: load("bookmesh.edges", seedEdges),
+      ratings: load("bookmesh.ratings", []),
+      comments: load("bookmesh.comments", []),
+      candidateBooks: {},
+      selectedBookId: null,
+      modalFromBookId: null,
+      modalBookId: null,
+      modalDirection: "next",
+      graphCenterId: null,
+      graphNodeCount: 0,
+      graphViewport: { x: 0, y: 0, width: 1000, height: 620 },
+      graphDrag: null,
+      highlightMyPaths: true,
+      activeReplyCommentId: null,
+      authDebugLog: []
+    };
+
+    hydrateSeedData();
+
+    function edge(fromBookId, toBookId, userId, offset) {
+      return {
+        id: `${userId}_${fromBookId}_${toBookId}_${Math.abs(offset)}`,
+        fromBookId,
+        toBookId,
+        userId,
+        submittedByAuthUid: userId,
+        isTestData: true,
+        dataSource: "sample",
+        createdAt: Date.now() + offset
+      };
+    }
+
+    function edgeCopies(fromBookId, toBookId, count, seedStart) {
+      return Array.from({ length: count }, (_, index) =>
+        edge(fromBookId, toBookId, `seed-${seedStart + index}`, -((seedStart + index) * 240000))
+      );
+    }
+
+    function book(id, title, authors, publisher, publishedDate, description, isbn13, keywords = [], options = {}) {
+      const createdAt = Date.now() - Math.floor(Math.random() * 9000000);
+      return {
+        id,
+        title,
+        authors,
+        publisher,
+        publishedDate,
+        description,
+        workId: options.workId || id,
+        editionLabel: options.editionLabel || null,
+        isbn10: null,
+        isbn13,
+        googleBooksId: null,
+        thumbnailUrl: isbn13 ? `https://covers.openlibrary.org/isbn/${isbn13}-L.jpg?default=false` : null,
+        isTestData: true,
+        dataSource: "sample",
+        createdAt,
+        updatedAt: createdAt,
+        searchKeywords: [title, ...authors, publisher, publishedDate, isbn13, ...keywords].filter(Boolean)
+      };
+    }
+
+    function load(key, fallback) {
+      try {
+        return JSON.parse(localStorage.getItem(key)) || fallback;
+      } catch {
+        return fallback;
+      }
+    }
+
+    function persist() {
+      localStorage.setItem("bookmesh.books", JSON.stringify(state.books));
+      localStorage.setItem("bookmesh.edges", JSON.stringify(state.edges));
+      localStorage.setItem("bookmesh.ratings", JSON.stringify(state.ratings));
+      localStorage.setItem("bookmesh.comments", JSON.stringify(state.comments));
+    }
+
+    async function initFirebase() {
+      if (!firebaseReady) {
+        showToast("Firebase config를 넣으면 Google 로그인과 Firestore 저장이 켜집니다.");
+        return;
+      }
+
+      showAuthLog("firebase-init-start", {
+        authDomain: firebaseConfig.authDomain,
+        projectId: firebaseConfig.projectId,
+        mobile: isMobileBrowser(),
+        embedded: isLikelyEmbeddedBrowser()
+      });
+
+      try {
+        await withAuthTimeout("init-persistence", () => setPersistence(firebase.auth, browserLocalPersistence));
+        showAuthLog("init-persistence-set", { persistence: "browserLocalPersistence" });
+        const redirectResult = await withAuthTimeout("redirect-result", () => getRedirectResult(firebase.auth));
+        if (redirectResult?.user) {
+          showAuthLog("redirect-result-user", {
+            uid: redirectResult.user.uid,
+            email: redirectResult.user.email || null
+          });
+          showToast("Google 계정으로 로그인했습니다.");
+        } else {
+          showAuthLog("redirect-result-empty", {
+            authCurrentUid: firebase.auth.currentUser?.uid || null
+          });
+        }
+      } catch (error) {
+        showError("리다이렉트 로그인 처리에 실패했습니다.", error, "auth/redirect");
+      }
+
+      onAuthStateChanged(firebase.auth, async (user) => {
+        showAuthLog("auth-state-changed", {
+          uid: user?.uid || null,
+          email: user?.email || null
+        });
+        currentUser.signedIn = Boolean(user);
+        currentUser.id = user?.uid || "demo-user";
+        currentUser.displayName = user?.displayName || "Demo Reader";
+        currentUser.nickname = "";
+        currentUser.email = user?.email || "reader@example.com";
+        currentUser.photoURL = user?.photoURL || null;
+        $("#authButton").textContent = user ? "로그아웃" : "Google 로그인";
+
+        if (user) {
+          await hydrateUserProfile(user);
+          await loadUserFirestoreData(user.uid);
+        }
+
+        renderMe();
+        if ($("#bookPage").classList.contains("active")) renderBookDetail();
+      });
+
+      await loadFirestoreSnapshot();
+    }
+
+    async function hydrateUserProfile(user) {
+      const userRef = doc(firebase.db, "users", user.uid);
+      let savedNickname = "";
+
+      try {
+        const userSnap = await getDoc(userRef);
+        savedNickname = normalizeNickname(userSnap.data()?.nickname);
+      } catch (error) {
+        showError("사용자 정보를 불러오지 못했습니다.", error, "users/read");
+      }
+
+      if (!savedNickname) {
+        const suggested = user.displayName || "";
+        const typed = window.prompt("BookMesh에서 사용할 별명을 입력해 주세요.", suggested);
+        savedNickname = normalizeNickname(typed || suggested);
+      }
+
+      currentUser.nickname = savedNickname;
+      await saveUserProfile(savedNickname, false);
+    }
+
+    function normalizeNickname(value) {
+      return String(value || "").trim().slice(0, 24);
+    }
+
+    async function saveUserProfile(nickname, showMessage = true) {
+      const clean = normalizeNickname(nickname);
+      if (!currentUser.signedIn) {
+        showToast("로그인 후 별명을 저장할 수 있습니다.");
+        return false;
+      }
+      if (!clean) {
+        showToast("별명을 입력해 주세요.");
+        return false;
+      }
+
+      currentUser.nickname = clean;
+      if (firebaseReady) {
+        try {
+          await setDoc(doc(firebase.db, "users", currentUser.id), {
+            displayName: currentUser.displayName,
+            nickname: clean,
+            email: currentUser.email,
+            photoURL: currentUser.photoURL,
+            updatedAt: serverTimestamp()
+          }, { merge: true });
+        } catch (error) {
+          showError("별명 저장에 실패했습니다.", error, "users/write");
+          return false;
+        }
+      }
+
+      renderMe();
+      if (showMessage) showToast("별명을 저장했습니다.");
+      return true;
+    }
+
+    async function loadFirestoreSnapshot() {
+      if (!firebaseReady) return;
+      try {
+        const [bookSnap, edgeSnap, ratingSnap, commentSnap] = await Promise.all([
+          getDocs(query(collection(firebase.db, "books"), limit(80))),
+          getDocs(query(collection(firebase.db, "readingEdges"), limit(300))),
+          getDocs(query(collection(firebase.db, "bookRatings"), limit(500))),
+          getDocs(query(collection(firebase.db, "bookComments"), limit(800)))
+        ]);
+
+        const remoteBooks = bookSnap.docs.map((item) => ({ id: item.id, ...item.data() }));
+        const remoteEdges = edgeSnap.docs.map((item) => normalizeRemoteEdge(item.id, item.data()));
+        const remoteRatings = ratingSnap.docs.map((item) => normalizeRemoteRating(item.id, item.data()));
+        const remoteComments = commentSnap.docs.map((item) => normalizeRemoteComment(item.id, item.data()));
+        mergeRemoteData(remoteBooks, remoteEdges, remoteRatings, remoteComments);
+        showToast("Firestore 데이터를 불러왔습니다.");
+      } catch (error) {
+        showError("Firestore 읽기에 실패했습니다.", error, "firestore/read");
+      }
+    }
+
+    async function loadUserFirestoreData(userId) {
+      if (!firebaseReady || !userId) return;
+      try {
+        const [myBookSnap, myEdgeSnap] = await Promise.all([
+          getDocs(query(collection(firebase.db, "books"), where("createdByAuthUid", "==", userId), limit(300))),
+          getDocs(query(collection(firebase.db, "readingEdges"), where("userId", "==", userId), limit(500)))
+        ]);
+
+        const myBooks = myBookSnap.docs.map((item) => ({ id: item.id, ...item.data() }));
+        const myEdges = myEdgeSnap.docs.map((item) => normalizeRemoteEdge(item.id, item.data()));
+        const knownBookIds = new Set([...state.books, ...myBooks].map((book) => book.id));
+        const referencedBookIds = Array.from(new Set(myEdges.flatMap((edge) => [edge.fromBookId, edge.toBookId])))
+          .filter((bookId) => bookId && !knownBookIds.has(bookId));
+        const referencedBooks = await Promise.all(
+          referencedBookIds.map(async (bookId) => {
+            const snap = await getDoc(doc(firebase.db, "books", bookId));
+            return snap.exists() ? { id: snap.id, ...snap.data() } : null;
+          })
+        );
+
+        mergeRemoteData([...myBooks, ...referencedBooks.filter(Boolean)], myEdges);
+        showToast(`내 정보 ${myBooks.length + referencedBooks.filter(Boolean).length}권, 경로 ${myEdges.length}개를 동기화했습니다.`);
+      } catch (error) {
+        showError("내 책과 경로 동기화에 실패했습니다.", error, "firestore/my-data");
+      }
+    }
+
+    function normalizeRemoteEdge(id, data) {
+      const createdAt = data.createdAt?.toMillis?.() || data.createdAt || Date.now();
+      return { id, ...data, createdAt };
+    }
+
+    function normalizeRemoteRating(id, data) {
+      const updatedAt = data.updatedAt?.toMillis?.() || data.updatedAt || Date.now();
+      return { id, ...data, updatedAt };
+    }
+
+    function normalizeRemoteComment(id, data) {
+      const createdAt = data.createdAt?.toMillis?.() || data.createdAt || Date.now();
+      return { id, ...data, createdAt };
+    }
+
+    function mergeRemoteData(remoteBooks, remoteEdges, remoteRatings = [], remoteComments = []) {
+      const books = new Map(state.books.map((item) => [item.id, item]));
+      remoteBooks
+        .filter((item) => !isLegacySampleBook(item))
+        .forEach((item) => books.set(item.id, { ...books.get(item.id), ...item }));
+      state.books = Array.from(books.values());
+
+      const edges = new Map(state.edges.map((item) => [item.id, item]));
+      remoteEdges
+        .filter((item) => !isLegacySampleEdge(item))
+        .forEach((item) => edges.set(item.id, item));
+      state.edges = Array.from(edges.values());
+
+      const ratings = new Map(state.ratings.map((item) => [item.id, item]));
+      remoteRatings.forEach((item) => ratings.set(item.id, item));
+      state.ratings = Array.from(ratings.values());
+
+      const comments = new Map(state.comments.map((item) => [item.id, item]));
+      remoteComments.forEach((item) => comments.set(item.id, item));
+      state.comments = Array.from(comments.values());
+      purgeLegacySampleData();
+      ensureGraphCenter();
+      persist();
+      renderHome();
+      renderGraphSuggestions();
+      renderGraph();
+      if ($("#bookPage").classList.contains("active")) renderBookDetail();
+    }
+
+    async function saveBookToFirestore(bookItem) {
+      if (!firebaseReady || !currentUser.signedIn) return;
+      await setDoc(doc(firebase.db, "books", bookItem.id), {
+        ...bookItem,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+    }
+
+    function hydrateSeedData() {
+      purgeLegacySampleData();
+      const seedVersion = "2026-05-10-no-sample-data";
+      if (localStorage.getItem("bookmesh.seedVersion") === seedVersion) return;
+
+      purgeLegacySampleData();
+
+      const bookIds = new Set(state.books.map((item) => item.id));
+      seedBooks.forEach((item) => {
+        if (!bookIds.has(item.id)) state.books.push(item);
+      });
+
+      const edgeIds = new Set(state.edges.map((item) => item.id));
+      seedEdges.forEach((item) => {
+        if (!edgeIds.has(item.id)) state.edges.push(item);
+      });
+
+      localStorage.setItem("bookmesh.seedVersion", seedVersion);
+      state.selectedBookId = findPreferredCenterBookId();
+      persist();
+    }
+
+    function isLegacySampleBook(item) {
+      const id = String(item?.id || "");
+      const createdBy = String(item?.createdByAuthUid || "");
+      return item?.isTestData === true ||
+        item?.dataSource === "sample" ||
+        id.startsWith("sample-") ||
+        id.startsWith("seed-") ||
+        createdBy.startsWith("seed-");
+    }
+
+    function isLegacySampleEdge(item) {
+      const id = String(item?.id || "");
+      const userId = String(item?.userId || "");
+      const submittedBy = String(item?.submittedByAuthUid || "");
+      return item?.isTestData === true ||
+        item?.dataSource === "sample" ||
+        id.startsWith("sample-") ||
+        id.includes("_seed-") ||
+        userId.startsWith("seed-") ||
+        submittedBy.startsWith("seed-");
+    }
+
+    function purgeLegacySampleData() {
+      const beforeBooks = state.books.length;
+      const beforeEdges = state.edges.length;
+      state.books = state.books.filter((item) => !isLegacySampleBook(item));
+      state.edges = state.edges.filter((item) => !isLegacySampleEdge(item));
+      if (beforeBooks !== state.books.length || beforeEdges !== state.edges.length) {
+        localStorage.setItem("bookmesh.samplePurgeVersion", "2026-05-10-legacy-sample-purge-v2");
+      }
+    }
+
+    function $(selector, root = document) {
+      return root.querySelector(selector);
+    }
+
+    function $all(selector, root = document) {
+      return Array.from(root.querySelectorAll(selector));
+    }
+
+    function showToast(message) {
+      const toast = $("#toast");
+      toast.textContent = message;
+      toast.classList.add("active");
+      setTimeout(() => toast.classList.remove("active"), String(message).includes("\n") ? 4200 : 2200);
+    }
+
+    function errorText(error) {
+      if (!error) return "알 수 없는 오류";
+      if (typeof error === "string") return error;
+      const parts = [
+        error.name,
+        error.code,
+        error.message
+      ].filter(Boolean);
+      if (parts.length) return parts.join(": ");
+      try {
+        return JSON.stringify(error);
+      } catch {
+        return String(error);
+      }
+    }
+
+    function showError(message, error, context = "") {
+      const detail = errorText(error);
+      const time = new Date().toLocaleString("ko-KR");
+      const prefix = context ? `[${context}] ` : "";
+      const debug = state.authDebugLog.length
+        ? `\n\n최근 로그인 로그\n${state.authDebugLog.slice(-12).join("\n\n")}`
+        : "";
+      const line = `${time} ${prefix}${message}\n${detail}${debug}`;
+      console.warn(`[BookMesh] ${prefix}${message}`, error);
+      $("#errorLog").textContent = `${line}\n\n${$("#errorLog").textContent || ""}`.trim();
+      $("#errorPanel").classList.add("active");
+      showToast(`${message}\n${detail}`);
+    }
+
+    function showAuthLog(message, detail = {}) {
+      const time = new Date().toLocaleString("ko-KR");
+      const payload = {
+        ...detail,
+        appVersion,
+        signedIn: currentUser.signedIn,
+        currentUid: firebase?.auth?.currentUser?.uid || null,
+        url: location.href,
+        userAgent: navigator.userAgent
+      };
+      const line = `${time} [auth/debug] ${message}\n${JSON.stringify(payload, null, 2)}`;
+      console.info(`[BookMesh] auth/debug ${message}`, payload);
+      state.authDebugLog.push(line);
+      state.authDebugLog = state.authDebugLog.slice(-24);
+    }
+
+    function isMobileBrowser() {
+      return /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+    }
+
+    function isAndroidBrowser() {
+      return /Android/i.test(navigator.userAgent);
+    }
+
+    function isLikelyEmbeddedBrowser() {
+      const ua = navigator.userAgent;
+      return /FBAN|FBAV|Instagram|KAKAOTALK|Line\/|NAVER\(inapp|; wv\)|Version\/[\d.]+ Mobile\/\S+ Safari\/\S+ \S+\/[\d.]+/i.test(ua);
+    }
+
+    function authOperationTimeout(label, timeoutMs = 8000) {
+      return new Promise((resolve) => {
+        setTimeout(() => {
+          showAuthLog(`${label}-still-waiting`, {
+            timeoutMs,
+            hint: "이 로그 뒤에 다음 단계가 없다면 브라우저 저장소/redirect 처리에서 멈춘 것입니다."
+          });
+          resolve(null);
+        }, timeoutMs);
+      });
+    }
+
+    async function withAuthTimeout(label, task) {
+      return Promise.race([task(), authOperationTimeout(label)]);
+    }
+
+    async function startGoogleLogin() {
+      showAuthLog("login-start", {
+        mobile: isMobileBrowser(),
+        android: isAndroidBrowser(),
+        embedded: isLikelyEmbeddedBrowser()
+      });
+
+      if (isLikelyEmbeddedBrowser()) {
+        showToast("구글 보안 정책상 앱 내부 브라우저에서는 로그인이 막힐 수 있습니다.\nChrome 또는 Safari에서 이 페이지를 다시 열어 주세요.");
+        showAuthLog("login-blocked-embedded-browser");
+        return;
+      }
+
+      if (isAndroidBrowser()) {
+        try {
+          showAuthLog("login-popup-start", { reason: "android-chrome-prefers-popup" });
+          await withAuthTimeout("login-popup", () => signInWithPopup(firebase.auth, firebase.provider));
+          showAuthLog("login-popup-complete", {
+            popupUid: firebase.auth.currentUser?.uid || null
+          });
+          return;
+        } catch (error) {
+          showError("팝업 로그인에 실패해 리다이렉트 로그인을 다시 시도합니다.", error, "auth/popup-fallback");
+        }
+      }
+
+      await setPersistence(firebase.auth, browserLocalPersistence);
+      showAuthLog("auth-persistence-set", { persistence: "browserLocalPersistence" });
+
+      if (isMobileBrowser()) {
+        showAuthLog("login-redirect-start");
+        await withAuthTimeout("login-redirect", () => signInWithRedirect(firebase.auth, firebase.provider));
+        return;
+      }
+
+      showAuthLog("login-popup-start");
+      await withAuthTimeout("login-popup", () => signInWithPopup(firebase.auth, firebase.provider));
+      showAuthLog("login-popup-complete", {
+        popupUid: firebase.auth.currentUser?.uid || null
+      });
+    }
+
+    window.addEventListener("error", (event) => {
+      showError("화면 처리 중 오류가 발생했습니다.", event.error || event.message, "window.error");
+    });
+
+    window.addEventListener("unhandledrejection", (event) => {
+      showError("비동기 작업 중 오류가 발생했습니다.", event.reason, "unhandledrejection");
+    });
+
+    function normalize(text) {
+      return String(text || "")
+        .normalize("NFKC")
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N}]+/gu, "");
+    }
+
+    function getBook(id) {
+      return state.books.find((book) => book.id === id);
+    }
+
+    function coverHtml(book, className = "cover") {
+      const title = escapeHtml(book.title);
+      const urls = buildCoverUrls(book);
+      if (urls.length) {
+        const fallback = title.slice(0, 7);
+        const encodedUrls = escapeHtml(JSON.stringify(urls));
+        return `<div class="${className}"><img src="${escapeHtml(urls[0])}" alt="${title} 표지" data-cover-index="0" data-cover-urls="${encodedUrls}" onerror="window.handleBookMeshCoverError(this)"><span>${fallback}</span></div>`;
+      }
+      return `<div class="${className}">${title.slice(0, 7)}</div>`;
+    }
+
+    function buildCoverUrls(book) {
+      const urls = [
+        normalizeCoverUrl(book.thumbnailUrl),
+        ...[book.isbn13, book.isbn10]
+          .map(cleanIsbn)
+          .filter(Boolean)
+          .flatMap((isbn) => [
+            `https://covers.openlibrary.org/isbn/${isbn}-L.jpg?default=false`,
+            `https://covers.openlibrary.org/isbn/${isbn}-M.jpg?default=false`
+          ])
+      ].filter(Boolean);
+      return Array.from(new Set(urls));
+    }
+
+    window.handleBookMeshCoverError = (image) => {
+      const urls = JSON.parse(image.dataset.coverUrls || "[]");
+      const nextIndex = Number(image.dataset.coverIndex || 0) + 1;
+      if (urls[nextIndex]) {
+        image.dataset.coverIndex = String(nextIndex);
+        image.src = urls[nextIndex];
+        return;
+      }
+      image.remove();
+    };
+
+    function normalizeCoverUrl(url) {
+      return String(url || "").replace("http://", "https://") || null;
+    }
+
+    function escapeHtml(value) {
+      return String(value ?? "")
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+    }
+
+    function renderBookCard(book, action = "detail") {
+      const saved = Boolean(getBook(book.id));
+      const actionButtons = action === "connect"
+        ? `<button class="primary" data-book-action="connect" data-book-id="${book.id}">연결하기</button>`
+        : `
+            <button class="secondary" data-book-action="detail" data-book-id="${book.id}">책 정보</button>
+            <button class="primary" data-book-action="save" data-book-id="${book.id}">${saved ? "추가됨" : "이 책만 추가"}</button>
+          `;
+      return `
+        <div class="card book-card">
+          ${coverHtml(book)}
+          <span>
+            <span class="book-title">${escapeHtml(book.title)}</span>
+            ${book.editionLabel ? `<span class="edition-badge">${escapeHtml(book.editionLabel)}</span>` : ""}
+            <span class="book-info">${escapeHtml(book.authors.join(", ") || "저자 미상")}</span><br>
+            <span class="book-info">${escapeHtml(book.publisher || "출판사 미상")} · ${escapeHtml((book.publishedDate || "").slice(0, 4) || "연도 미상")}</span><br>
+            <span class="book-info">${escapeHtml(book.isbn13 || book.isbn10 || book.googleBooksId || "ISBN 없음")}</span>
+          </span>
+          <span class="actions">${actionButtons}</span>
+        </div>
+      `;
+    }
+
+    function renderSearchLink(label) {
+      const clean = String(label || "").trim();
+      if (!clean) return "";
+      return `<button class="inline-search-link" type="button" data-search-query="${escapeHtml(clean)}">${escapeHtml(clean)}</button>`;
+    }
+
+    function renderDetailMeta(book) {
+      const authorLinks = (book.authors || []).filter(Boolean).map(renderSearchLink).join(", ") || "저자 미상";
+      const publisher = book.publisher ? renderSearchLink(book.publisher) : "출판사 미상";
+      const year = escapeHtml((book.publishedDate || "").slice(0, 4) || "연도 미상");
+      return `${authorLinks} · ${publisher} · ${year}`;
+    }
+
+    function aggregateEdges() {
+      const map = new Map();
+      state.edges.forEach((item) => {
+        if (isLegacySampleEdge(item)) return;
+        const key = `${item.fromBookId}_${item.toBookId}`;
+        const current = map.get(key) || {
+          id: key,
+          fromBookId: item.fromBookId,
+          toBookId: item.toBookId,
+          count: 0,
+          myCount: 0,
+          updatedAt: 0
+        };
+        current.count += 1;
+        if (
+          currentUser.signedIn &&
+          item.userId === currentUser.id &&
+          !isLegacySampleEdge(item) &&
+          item.dataSource === "user" &&
+          item.isTestData !== true
+        ) {
+          current.myCount += 1;
+        }
+        current.updatedAt = Math.max(current.updatedAt, item.createdAt);
+        map.set(key, current);
+      });
+      return Array.from(map.values()).sort((a, b) => b.count - a.count || b.updatedAt - a.updatedAt);
+    }
+
+    function getRatingStats(bookId) {
+      const ratings = state.ratings.filter((item) => item.bookId === bookId);
+      if (!ratings.length) return { average: null, count: 0 };
+      const total = ratings.reduce((sum, item) => sum + Number(item.rating || 0), 0);
+      return {
+        average: Math.round((total / ratings.length) * 10) / 10,
+        count: ratings.length
+      };
+    }
+
+    function getMyRating(bookId) {
+      if (!currentUser.signedIn) return null;
+      return state.ratings.find((item) => item.bookId === bookId && item.userId === currentUser.id) || null;
+    }
+
+    function renderRatingPanel(bookId) {
+      const stats = getRatingStats(bookId);
+      const myRating = getMyRating(bookId)?.rating || 0;
+      const disabled = currentUser.signedIn ? "" : "disabled";
+      const buttons = [1, 2, 3, 4, 5].map((score) => `
+        <button class="star ${score <= myRating ? "active" : ""}" ${disabled} data-rate-book="${bookId}" data-rating="${score}" aria-label="${score}점">★</button>
+      `).join("");
+      const summary = stats.count
+        ? `평균 ${stats.average.toFixed(1)}점 · ${stats.count}명 참여`
+        : "아직 별점이 없습니다.";
+      const mine = currentUser.signedIn
+        ? (myRating ? `내 별점 ${myRating}점` : "별점을 선택해 주세요.")
+        : "로그인하면 별점을 남길 수 있습니다.";
+      const deleteButton = currentUser.signedIn && myRating
+        ? `<button class="ghost" data-delete-rating="${bookId}">내 별점 삭제</button>`
+        : "";
+      return `
+        <div class="rating-panel">
+          <div class="stars">${buttons}</div>
+          <div>
+            <div><strong>${summary}</strong></div>
+            <div class="meta">${mine}</div>
+            ${deleteButton}
+          </div>
+        </div>
+      `;
+    }
+
+    function renderPathCard(item, allowDelete = false) {
+      const from = getBook(item.fromBookId);
+      const to = getBook(item.toBookId);
+      if (!from || !to) return "";
+      return `
+        <div class="card path-card">
+          <div class="path-line">
+            <span>${escapeHtml(from.title)}</span>
+            <span class="arrow">→</span>
+            <span>${escapeHtml(to.title)}</span>
+          </div>
+          <div class="meta">${item.count ? `${item.count}명이 이어 읽음` : formatDate(item.createdAt)}</div>
+          <div class="actions">
+            <button class="secondary" data-open-book="${from.id}">시작 책</button>
+            <button class="ghost" data-open-graph="${from.id}">그래프</button>
+            ${allowDelete ? `<button class="danger" data-delete-edge="${item.id}">삭제</button>` : ""}
+          </div>
+        </div>
+      `;
+    }
+
+    function formatDate(time) {
+      return new Intl.DateTimeFormat("ko-KR", { dateStyle: "medium", timeStyle: "short" }).format(time);
+    }
+
+    function setPage(page, options = {}) {
+      const { push = true } = options;
+      clearLeavingPageInputs(page);
+      $all(".page").forEach((el) => el.classList.remove("active"));
+      $(`#${page}Page`).classList.add("active");
+      $all(".nav button[data-route]").forEach((button) => {
+        button.classList.toggle("active", button.dataset.route === page);
+      });
+      if (page === "home") renderHome();
+      if (page === "book") renderBookDetail();
+      if (page === "graph") {
+        renderGraphSuggestions();
+        renderGraph();
+      }
+      if (page === "me") renderMe();
+      if (push) pushAppHistory(page);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function clearLeavingPageInputs(nextPage) {
+      const activePage = $(".page.active");
+      if (!activePage) return;
+      if (activePage.id === `${nextPage}Page`) return;
+      $all("input[type='text'], input:not([type]), textarea", activePage).forEach((input) => {
+        if (input.id === "searchInput" || input.id === "graphSearchInput" || input.closest("#bookModal")) {
+          input.value = "";
+        }
+      });
+    }
+
+    function pushAppHistory(page) {
+      const historyState = {
+        page,
+        selectedBookId: state.selectedBookId,
+        highlightMyPaths: state.highlightMyPaths
+      };
+      const hash = page === "home" ? "" : `#${page}${state.selectedBookId ? `/${encodeURIComponent(state.selectedBookId)}` : ""}`;
+      history.pushState(historyState, "", `${location.pathname}${location.search}${hash}`);
+    }
+
+    function restoreAppHistory(historyState) {
+      if (historyState?.selectedBookId) state.selectedBookId = historyState.selectedBookId;
+      if (typeof historyState?.highlightMyPaths === "boolean") state.highlightMyPaths = historyState.highlightMyPaths;
+      setPage(historyState?.page || "home", { push: false });
+    }
+
+    function searchFromKeyword(query) {
+      const clean = String(query || "").trim();
+      if (!clean) return;
+      $("#searchInput").value = clean;
+      setPage("search");
+      handleSearch($("#searchPage [data-search-form]"), "#searchResults");
+    }
+
+    function renderHome() {
+      const recent = [...state.edges]
+        .sort((a, b) => b.createdAt - a.createdAt)
+        .slice(0, 6)
+        .map((item) => renderPathCard(item))
+        .join("");
+      $("#recentPaths").innerHTML = recent || `<div class="empty">아직 추가된 경로가 없습니다.</div>`;
+      const popular = aggregateEdges();
+      $("#popularPaths").innerHTML = popular.slice(0, 6).map((item) => renderPathCard(item)).join("") || `<div class="empty">아직 인기 연결이 없습니다.</div>`;
+      renderHomeGraph(popular);
+    }
+
+    function renderHomeGraph(aggregates = aggregateEdges()) {
+      const svg = $("#homeGraphSvg");
+      if (!svg) return;
+      const centerId = findPreferredCenterBookId(aggregates);
+      if (!centerId) {
+        svg.innerHTML = `<text x="500" y="310" text-anchor="middle" fill="#7f6657" font-size="18" font-weight="800">책을 추가하면 그래프가 여기에 나타납니다.</text>`;
+        return;
+      }
+      drawGraph(buildGraph(centerId), centerId, svg);
+    }
+
+    function renderGraphSuggestions() {
+      const datalist = $("#graphBookSuggestions");
+      if (!datalist) return;
+      datalist.innerHTML = state.books
+        .slice()
+        .sort((a, b) => a.title.localeCompare(b.title, "ko"))
+        .map((book) => {
+          const authors = (book.authors || []).join(", ");
+          const label = authors ? `${book.title} - ${authors}` : book.title;
+          return `<option value="${escapeHtml(book.title)}" label="${escapeHtml(label)}"></option>`;
+        })
+        .join("");
+    }
+
+    function findMostConnectedBookId(aggregates = aggregateEdges()) {
+      const scores = new Map();
+      aggregates.forEach((edge) => {
+        scores.set(edge.fromBookId, (scores.get(edge.fromBookId) || 0) + edge.count);
+        scores.set(edge.toBookId, (scores.get(edge.toBookId) || 0) + edge.count);
+      });
+      return Array.from(scores.entries()).sort((a, b) => b[1] - a[1])[0]?.[0] || state.books[0]?.id || null;
+    }
+
+    function findPreferredCenterBookId(aggregates = aggregateEdges()) {
+      const preferred = state.books.find((book) => normalize(book.title) === normalize("여자 둘이 살고 있습니다"));
+      return preferred?.id || findMostConnectedBookId(aggregates);
+    }
+
+    function ensureGraphCenter(aggregates = aggregateEdges()) {
+      if (getBook(state.selectedBookId)) return state.selectedBookId;
+      state.selectedBookId = findPreferredCenterBookId(aggregates);
+      return state.selectedBookId;
+    }
+
+    function searchLocalBooks(query) {
+      const isbn = parseIsbn(query);
+      const q = normalize(query);
+      if (!q) return state.books.slice(0, 8);
+      return state.books.filter((book) => {
+        if (isbn && [book.isbn10, book.isbn13].some((value) => cleanIsbn(value) === isbn.value)) {
+          return true;
+        }
+
+        const haystack = [
+          book.title,
+          book.authors.join(" "),
+          book.publisher,
+          book.isbn10,
+          book.isbn13,
+          book.googleBooksId,
+          book.openLibraryKey,
+          ...(book.searchKeywords || [])
+        ].map(normalize).join(" ");
+        return haystack.includes(q);
+      });
+    }
+
+    async function searchBooks(query) {
+      const isbn = parseIsbn(query);
+      if (isbn && !isbn.valid) {
+        showToast("ISBN 형식은 맞지만 체크섬이 맞지 않습니다. 검색은 계속 시도합니다.");
+      }
+
+      const local = searchLocalBooks(query);
+
+      const failures = [];
+      const runApi = async (label, task) => {
+        try {
+          return await task();
+        } catch (error) {
+          console.warn(`[BookMesh] ${label} failed`, error);
+          failures.push(`${label} (${errorText(error)})`);
+          return null;
+        }
+      };
+
+      if (isbn) {
+        const [aladinBook, googleResults, openLibraryBook] = await Promise.all([
+          runApi("알라딘 상품 API", () => searchAladinByIsbn(isbn.value)),
+          runApi("Google Books API", () => searchGoogleBooks(`isbn:${isbn.value}`, {
+            maxResults: 5,
+            langRestrict: false
+          })),
+          runApi("Open Library ISBN API", () => searchOpenLibraryByIsbn(isbn.value))
+        ]);
+
+        const exactResults = [
+          aladinBook,
+          ...(googleResults || []),
+          openLibraryBook
+        ].filter(Boolean);
+        if (exactResults.length) return mergeSearchResults(local, exactResults);
+
+        if (!local.length) showSearchFallbackMessage(failures, "해당 ISBN으로 찾은 책이 없습니다.");
+        return mergeSearchResults(local, []);
+      }
+
+      const [aladinResults, googleResults, openLibraryResults] = await Promise.all([
+        runApi("알라딘 상품 API", () => searchAladinBooks(query)),
+        runApi("Google Books API", () => searchGoogleBooksVariants(query, {
+          maxResults: 12,
+          langRestrict: true
+        })),
+        runApi("Open Library Search API", () => searchOpenLibraryByQuery(query))
+      ]);
+
+      const merged = mergeSearchResults(local, [
+        ...(aladinResults || []),
+        ...(googleResults || []),
+        ...(openLibraryResults || [])
+      ]);
+      if (merged.length) return merged;
+
+      if (!local.length) showSearchFallbackMessage(failures, "검색 결과가 없습니다.");
+      return [];
+    }
+
+    function mergeSearchResults(localResults, externalResults) {
+      const seen = new Set();
+      const merged = [];
+      [...localResults, ...externalResults].forEach((book) => {
+        if (!book) return;
+        const key = searchResultKey(book);
+        if (seen.has(key)) return;
+        seen.add(key);
+        merged.push(book);
+      });
+      return merged;
+    }
+
+    function searchResultKey(book) {
+      return cleanIsbn(book.isbn13) ||
+        cleanIsbn(book.isbn10) ||
+        book.aladinItemId ||
+        book.googleBooksId ||
+        book.openLibraryKey ||
+        normalize(`${book.title}-${(book.authors || []).join(",")}-${book.publisher || ""}`);
+    }
+
+    function uniqueBooks(books) {
+      return mergeSearchResults([], books);
+    }
+
+    function showSearchFallbackMessage(failures, fallbackMessage) {
+      if (failures.length > 0) {
+        showToast(`외부 책 API 검색에 실패했습니다.\n실패한 API: ${failures.join(", ")}`);
+        return;
+      }
+      showToast(fallbackMessage);
+    }
+
+    async function searchAladinByIsbn(isbn) {
+      const data = await fetchAladinByIsbn(isbn);
+      const item = data?.item?.[0];
+      return item ? bookFromAladin(item, isbn) : null;
+    }
+
+    async function searchAladinBooks(query) {
+      const queryTypes = ["Keyword", "Author", "Title"];
+      const batches = await Promise.all(queryTypes.map((queryType) => fetchAladinSearch(query, queryType)));
+      const results = batches.flatMap((data) => (data?.item || []).map((item) => bookFromAladin(item)).filter(Boolean));
+      return uniqueBooks(results);
+    }
+
+    async function fetchAladinSearch(query, queryType) {
+      const params = new URLSearchParams({
+        ttbkey: aladinConfig.ttbKey,
+        Query: query,
+        QueryType: queryType,
+        MaxResults: "12",
+        start: "1",
+        SearchTarget: "Book",
+        output: "js",
+        Version: "20131101",
+        Cover: "Big"
+      });
+      const url = `${aladinConfig.searchEndpoint}?${params.toString()}`;
+      console.debug(`[BookMesh] Aladin ${queryType} lookup`, url);
+      return fetchAladinData(url);
+    }
+
+    async function fetchAladinByIsbn(isbn) {
+      const params = new URLSearchParams({
+        ttbkey: aladinConfig.ttbKey,
+        itemIdType: isbn.length === 13 ? "ISBN13" : "ISBN",
+        ItemId: isbn,
+        output: "js",
+        Version: "20131101",
+        Cover: "Big"
+      });
+      const url = `${aladinConfig.lookupEndpoint}?${params.toString()}`;
+      console.debug("[BookMesh] Aladin ISBN lookup", url);
+      return fetchAladinData(url);
+    }
+
+    async function fetchAladinData(url) {
+      const errors = [];
+      for (const proxy of aladinConfig.corsProxyEndpoints) {
+        try {
+          return await fetchAladinViaProxy(url, proxy);
+        } catch (error) {
+          errors.push(error);
+          console.debug("[BookMesh] Aladin proxy fetch failed", proxy.url, error);
+        }
+      }
+
+      try {
+        return await fetchJson(url);
+      } catch (error) {
+        errors.push(error);
+        throw errors[0] || error;
+      }
+    }
+
+    async function fetchAladinViaProxy(url, proxy) {
+      const target = proxy.mode === "encoded" ? encodeURIComponent(url) : url;
+      return fetchJson(`${proxy.url}${target}`, proxy.repairText);
+    }
+
+    async function fetchJson(url, repairText = false) {
+      const response = await fetchWithTimeout(url, 5200);
+      if (!response.ok) throw new Error(`Fetch failed ${response.status}`);
+      const text = await response.text();
+      const json = JSON.parse(text);
+      return repairText ? repairMojibakeDeep(json) : json;
+    }
+
+    async function fetchWithTimeout(url, timeoutMs = 5200) {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+      try {
+        return await fetch(url, { signal: controller.signal });
+      } finally {
+        clearTimeout(timer);
+      }
+    }
+
+    function repairMojibakeDeep(value) {
+      if (typeof value === "string") return repairMojibake(value);
+      if (Array.isArray(value)) return value.map(repairMojibakeDeep);
+      if (value && typeof value === "object") {
+        return Object.fromEntries(
+          Object.entries(value).map(([key, item]) => [key, repairMojibakeDeep(item)])
+        );
+      }
+      return value;
+    }
+
+    function repairMojibake(value) {
+      if (!/[ÃÂìíêëîïðñòóôõöøùúûüýþ]/.test(value)) return value;
+      try {
+        return decodeURIComponent(escape(value));
+      } catch {
+        return value;
+      }
+    }
+
+    function fetchAladinJsonp(url) {
+      return new Promise((resolve) => {
+        const callbackName = `bookmeshAladin_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+        const script = document.createElement("script");
+        const cleanup = () => {
+          delete window[callbackName];
+          script.remove();
+        };
+
+        const timer = setTimeout(() => {
+          cleanup();
+          resolve(null);
+        }, 6000);
+
+        window[callbackName] = (...args) => {
+          clearTimeout(timer);
+          const data = args.length > 1 ? args[1] : args[0];
+          cleanup();
+          resolve(data);
+        };
+
+        script.onerror = () => {
+          clearTimeout(timer);
+          cleanup();
+          resolve(null);
+        };
+
+        const jsonpUrl = new URL(url);
+        jsonpUrl.searchParams.set("CallBack", callbackName);
+        script.src = jsonpUrl.toString();
+        document.head.appendChild(script);
+      });
+    }
+
+    async function searchGoogleBooks(query, options = {}) {
+      const { maxResults = 12, langRestrict = true } = options;
+      const params = new URLSearchParams({
+        q: query,
+        maxResults: String(maxResults)
+      });
+      if (langRestrict) params.set("langRestrict", "ko");
+      const url = `https://www.googleapis.com/books/v1/volumes?${params.toString()}`;
+      console.debug("[BookMesh] Google Books lookup", url);
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Google Books API failed");
+      const data = await response.json();
+      return (data.items || []).map(bookFromGoogle).filter(Boolean);
+    }
+
+    async function searchGoogleBooksVariants(query, options = {}) {
+      const variants = [
+        query,
+        `inauthor:${query}`,
+        `intitle:${query}`
+      ];
+      const results = [];
+      for (const variant of variants) {
+        results.push(...(await searchGoogleBooks(variant, options)));
+      }
+      return uniqueBooks(results);
+    }
+
+    async function searchOpenLibraryByIsbn(isbn) {
+      const url = `https://openlibrary.org/isbn/${encodeURIComponent(isbn)}.json`;
+      console.debug("[BookMesh] Open Library ISBN lookup", url);
+      const response = await fetch(url);
+      if (!response.ok) return null;
+      const data = await response.json();
+      return bookFromOpenLibrary(data, isbn);
+    }
+
+    async function searchOpenLibraryByQuery(query) {
+      const params = new URLSearchParams({
+        q: query,
+        limit: "12"
+      });
+      const url = `https://openlibrary.org/search.json?${params.toString()}`;
+      console.debug("[BookMesh] Open Library search lookup", url);
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Open Library Search API failed");
+      const data = await response.json();
+      return (data.docs || []).map(bookFromOpenLibrarySearch).filter(Boolean);
+    }
+
+    function cleanIsbn(value) {
+      return String(value || "").toUpperCase().replace(/[^0-9X]/g, "");
+    }
+
+    function parseIsbn(query) {
+      const value = extractIsbnCandidate(query);
+      if (value.length !== 10 && value.length !== 13) return null;
+      return {
+        value,
+        type: value.length === 13 ? "ISBN_13" : "ISBN_10",
+        valid: value.length === 13 ? isValidIsbn13(value) : isValidIsbn10(value)
+      };
+    }
+
+    function extractIsbnCandidate(query) {
+      const text = String(query || "").toUpperCase();
+      const matches = text.match(/[0-9X][0-9X\-\s]{8,20}[0-9X]/g) || [];
+      const candidates = matches
+        .map(cleanIsbn)
+        .filter((value) => value.length === 10 || value.length === 13);
+      return candidates.find((value) => (
+        value.length === 13 ? isValidIsbn13(value) : isValidIsbn10(value)
+      )) || candidates[0] || "";
+    }
+
+    function isValidIsbn10(value) {
+      if (!/^[0-9]{9}[0-9X]$/.test(value)) return false;
+      const sum = value.split("").reduce((total, char, index) => {
+        const digit = char === "X" ? 10 : Number(char);
+        return total + digit * (10 - index);
+      }, 0);
+      return sum % 11 === 0;
+    }
+
+    function isValidIsbn13(value) {
+      if (!/^[0-9]{13}$/.test(value)) return false;
+      const sum = value.split("").reduce((total, char, index) => {
+        const digit = Number(char);
+        return total + digit * (index % 2 === 0 ? 1 : 3);
+      }, 0);
+      return sum % 10 === 0;
+    }
+
+    function bookFromGoogle(item) {
+      const info = item.volumeInfo || {};
+      const ids = info.industryIdentifiers || [];
+      const isbn13 = ids.find((id) => id.type === "ISBN_13")?.identifier || null;
+      const isbn10 = ids.find((id) => id.type === "ISBN_10")?.identifier || null;
+      return {
+        id: createBookId({ isbn13, isbn10, googleBooksId: item.id, title: info.title }),
+        title: info.title || "제목 없음",
+        authors: info.authors || [],
+        publisher: info.publisher || null,
+        publishedDate: info.publishedDate || null,
+        description: info.description || null,
+        isbn10,
+        isbn13,
+        googleBooksId: item.id,
+        thumbnailUrl: normalizeCoverUrl(info.imageLinks?.thumbnail),
+        isTestData: false,
+        dataSource: "google-books",
+        createdByAuthUid: currentUser.signedIn ? currentUser.id : null,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        searchKeywords: [info.title, ...(info.authors || []), isbn10, isbn13].filter(Boolean)
+      };
+    }
+
+    function bookFromAladin(item, isbn = "") {
+      const isbnValue = cleanIsbn(isbn);
+      const isbn13 = item.isbn13 || (isbnValue.length === 13 ? isbnValue : null);
+      const isbn10 = item.isbn || (isbnValue.length === 10 ? isbnValue : null);
+      return {
+        id: createBookId({ isbn13, isbn10, googleBooksId: item.itemId, title: item.title }),
+        title: item.title || "제목 없음",
+        authors: item.author ? String(item.author).split(",").map((value) => value.trim()).filter(Boolean) : [],
+        publisher: item.publisher || null,
+        publishedDate: item.pubDate || null,
+        description: item.description || null,
+        isbn10,
+        isbn13,
+        googleBooksId: null,
+        aladinItemId: item.itemId || null,
+        aladinLink: item.link || null,
+        thumbnailUrl: normalizeCoverUrl(item.cover),
+        coverProvider: item.cover ? "aladin" : null,
+        isTestData: false,
+        dataSource: isbnValue ? "aladin-isbn" : "aladin-search",
+        createdByAuthUid: currentUser.signedIn ? currentUser.id : null,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        searchKeywords: [item.title, item.author, item.publisher, isbn10, isbn13].filter(Boolean)
+      };
+    }
+
+    function bookFromOpenLibrary(info, isbn) {
+      const isbn13 = (info.isbn_13 || []).find(Boolean) || (isbn.length === 13 ? isbn : null);
+      const isbn10 = (info.isbn_10 || []).find(Boolean) || (isbn.length === 10 ? isbn : null);
+      const coverId = info.covers?.[0];
+      return {
+        id: createBookId({ isbn13, isbn10, googleBooksId: info.key, title: info.title }),
+        title: info.title || "제목 없음",
+        authors: info.by_statement ? [info.by_statement] : [],
+        publisher: (info.publishers || []).find(Boolean) || null,
+        publishedDate: info.publish_date || null,
+        description: typeof info.description === "string" ? info.description : info.description?.value || null,
+        isbn10,
+        isbn13,
+        googleBooksId: null,
+        openLibraryKey: info.key || null,
+        thumbnailUrl: coverId ? `https://covers.openlibrary.org/b/id/${coverId}-M.jpg` : null,
+        isTestData: false,
+        dataSource: "open-library-isbn",
+        createdByAuthUid: currentUser.signedIn ? currentUser.id : null,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        searchKeywords: [info.title, info.by_statement, isbn10, isbn13].filter(Boolean)
+      };
+    }
+
+    function bookFromOpenLibrarySearch(info) {
+      const isbn13 = (info.isbn || []).find((value) => cleanIsbn(value).length === 13) || null;
+      const isbn10 = (info.isbn || []).find((value) => cleanIsbn(value).length === 10) || null;
+      const coverId = info.cover_i;
+      const authors = info.author_name || [];
+      return {
+        id: createBookId({ isbn13, isbn10, googleBooksId: info.key, title: info.title }),
+        title: info.title || "제목 없음",
+        authors,
+        publisher: (info.publisher || []).find(Boolean) || null,
+        publishedDate: info.first_publish_year ? String(info.first_publish_year) : null,
+        description: null,
+        isbn10,
+        isbn13,
+        googleBooksId: null,
+        openLibraryKey: info.key || null,
+        thumbnailUrl: coverId ? `https://covers.openlibrary.org/b/id/${coverId}-M.jpg` : null,
+        isTestData: false,
+        dataSource: "open-library-search",
+        createdByAuthUid: currentUser.signedIn ? currentUser.id : null,
+        createdAt: Date.now(),
+        updatedAt: Date.now(),
+        searchKeywords: [info.title, ...authors, isbn10, isbn13].filter(Boolean)
+      };
+    }
+
+    function createBookId(book) {
+      const base = book.isbn13 || book.isbn10 || book.googleBooksId || book.title || crypto.randomUUID();
+      return normalize(base).replace(/[^a-z0-9가-힣-]/gi, "-").slice(0, 80);
+    }
+
+    function upsertBook(candidate) {
+      if (!candidate) return null;
+      const existing = state.books.find((book) => {
+        if (candidate.isbn13 && book.isbn13 === candidate.isbn13) return true;
+        if (candidate.isbn10 && book.isbn10 === candidate.isbn10) return true;
+        if (candidate.googleBooksId && book.googleBooksId === candidate.googleBooksId) return true;
+        if (candidate.openLibraryKey && book.openLibraryKey === candidate.openLibraryKey) return true;
+        if (candidate.aladinItemId && book.aladinItemId === candidate.aladinItemId) return true;
+        return false;
+      });
+      if (existing) return existing;
+      if (!currentUser.signedIn) {
+        showToast("로그인한 사용자만 책을 추가할 수 있습니다.");
+        return null;
+      }
+      state.books.push(candidate);
+      persist();
+      renderGraphSuggestions();
+      saveBookToFirestore(candidate).catch((error) => {
+        showError("책은 로컬에 저장됐지만 Firestore 저장은 실패했습니다.", error, "books/write");
+      });
+      return candidate;
+    }
+
+    async function handleSearch(form, targetSelector, action = "detail") {
+      const query = new FormData(form).get("q");
+      const target = $(targetSelector);
+      const localResults = searchLocalBooks(query);
+      if (localResults.length) {
+        localResults.forEach((book) => {
+          state.candidateBooks[book.id] = book;
+        });
+        target.innerHTML = `${localResults.map((book) => renderBookCard(book, action)).join("")}<div class="empty">외부 책 후보를 더 찾는 중입니다.</div>`;
+      } else {
+        target.innerHTML = `<div class="empty">검색 중입니다.</div>`;
+      }
+      try {
+        const results = await searchBooks(query);
+        results.forEach((book) => {
+          state.candidateBooks[book.id] = book;
+        });
+        target.innerHTML = results.map((book) => renderBookCard(book, action)).join("") || `<div class="empty">검색 결과가 없습니다.</div>`;
+      } catch (error) {
+        target.innerHTML = `<div class="empty">검색 중 오류가 났습니다. ISBN, 제목, 저자명을 바꿔 다시 검색해 주세요.</div>`;
+        showError("책 검색 처리에 실패했습니다.", error, "search/render");
+      }
+    }
+
+    function renderBookDetail() {
+      const book = getBook(state.selectedBookId) || state.books[0];
+      if (!book) {
+        $("#bookDetail").innerHTML = `<div class="empty">아직 저장된 책이 없습니다. 검색에서 책을 먼저 추가해 주세요.</div>`;
+        return;
+      }
+      state.selectedBookId = book.id;
+      const outgoing = aggregateEdges().filter((item) => item.fromBookId === book.id);
+      const incoming = aggregateEdges().filter((item) => item.toBookId === book.id);
+      $("#bookDetail").innerHTML = `
+        <div class="detail-layout">
+          <div>${coverHtml(book, "cover detail-cover")}</div>
+          <div>
+            <h1>${escapeHtml(book.title)}</h1>
+            ${book.editionLabel ? `<div class="edition-badge">${escapeHtml(book.editionLabel)}</div>` : ""}
+            <p class="lead">${renderDetailMeta(book)}</p>
+            <p>${escapeHtml(book.description || "아직 설명이 없습니다.")}</p>
+            <p class="meta">ISBN ${escapeHtml(book.isbn13 || book.isbn10 || "없음")}</p>
+            ${renderRatingPanel(book.id)}
+            <div class="actions">
+              <button class="primary" data-add-next="${book.id}">이 책 다음에 읽은 책 추가</button>
+              <button class="secondary" data-add-previous="${book.id}">이 책 전에 읽은 책 추가</button>
+              <button class="secondary" data-open-graph="${book.id}">그래프 보기</button>
+            </div>
+          </div>
+        </div>
+        <div class="section split">
+          <div class="card">
+            <h3>이 책 다음에 많이 읽은 책</h3>
+            ${renderConnections(outgoing, "toBookId")}
+          </div>
+          <div class="card">
+            <h3>이 책 이전에 많이 읽은 책</h3>
+            ${renderConnections(incoming, "fromBookId")}
+          </div>
+        </div>
+        <div class="section card">
+          <h3>댓글</h3>
+          ${renderComments(book.id)}
+        </div>
+      `;
+      ensureAladinBookData(book.id);
+    }
+
+    function renderComments(bookId) {
+      const bookComments = state.comments
+        .filter((item) => item.bookId === bookId)
+        .sort((a, b) => a.createdAt - b.createdAt);
+      const roots = bookComments.filter((item) => !item.parentCommentId);
+      const repliesByParent = new Map();
+      bookComments
+        .filter((item) => item.parentCommentId)
+        .forEach((item) => {
+          const list = repliesByParent.get(item.parentCommentId) || [];
+          list.push(item);
+          repliesByParent.set(item.parentCommentId, list);
+        });
+
+      const form = currentUser.signedIn
+        ? renderCommentForm(bookId)
+        : `<div class="empty">로그인하면 댓글을 남길 수 있습니다.</div>`;
+      const list = roots.map((comment) => renderComment(comment, repliesByParent.get(comment.id) || [])).join("");
+      return `
+        <div class="comments">
+          ${form}
+          ${currentUser.signedIn && roots.length ? `<div class="comment-hint">원댓글을 더블클릭하면 대댓글 입력창이 열립니다.</div>` : ""}
+          ${list || `<div class="empty">아직 댓글이 없습니다.</div>`}
+        </div>
+      `;
+    }
+
+    function renderCommentForm(bookId, parentCommentId = "") {
+      const placeholder = parentCommentId ? "대댓글을 입력해 주세요." : "이 책에 대한 댓글을 입력해 주세요.";
+      return `
+        <form class="comment-form" data-comment-form="${bookId}" data-parent-comment="${parentCommentId}">
+          <textarea name="text" maxlength="600" placeholder="${placeholder}"></textarea>
+          <div class="actions">
+            <button class="secondary" type="submit">${parentCommentId ? "대댓글 등록" : "댓글 등록"}</button>
+          </div>
+        </form>
+      `;
+    }
+
+    function renderComment(comment, replies) {
+      const owner = currentUser.signedIn && comment.userId === currentUser.id;
+      const createdAt = comment.createdAt ? formatDate(comment.createdAt) : "";
+      const replyForm = currentUser.signedIn && state.activeReplyCommentId === comment.id
+        ? renderCommentForm(comment.bookId, comment.id)
+        : "";
+      const replyList = replies.map((reply) => renderReply(reply)).join("");
+      return `
+        <div class="comment" data-reply-target="${comment.id}">
+          <div class="comment-line">
+            <span class="comment-author">${escapeHtml(comment.nickname || "익명 톡토로")}</span>
+            <span class="comment-time">- ${escapeHtml(createdAt)} -</span>
+            <span class="comment-body">${escapeHtml(comment.text)}</span>
+            ${owner ? `<button class="ghost" data-delete-comment="${comment.id}">삭제</button>` : ""}
+          </div>
+          ${replyForm}
+          ${replyList}
+        </div>
+      `;
+    }
+
+    function renderReply(comment) {
+      const owner = currentUser.signedIn && comment.userId === currentUser.id;
+      const createdAt = comment.createdAt ? formatDate(comment.createdAt) : "";
+      return `
+        <div class="comment reply">
+          <div class="comment-line">
+            <span class="comment-author">${escapeHtml(comment.nickname || "익명 톡토로")}</span>
+            <span class="comment-time">- ${escapeHtml(createdAt)} -</span>
+            <span class="comment-body">${escapeHtml(comment.text)}</span>
+            ${owner ? `<button class="ghost" data-delete-comment="${comment.id}">삭제</button>` : ""}
+          </div>
+        </div>
+      `;
+    }
+
+    async function ensureAladinBookData(bookId) {
+      const book = getBook(bookId);
+      const isbn = cleanIsbn(book?.isbn13 || book?.isbn10);
+      if (!book || !isbn || book.aladinCheckedAt || book.coverProvider === "aladin") return;
+
+      book.aladinCheckedAt = Date.now();
+      const aladinBook = await searchAladinByIsbn(isbn);
+      if (!aladinBook) {
+        persist();
+        return;
+      }
+
+      Object.assign(book, {
+        publisher: book.publisher || aladinBook.publisher,
+        publishedDate: book.publishedDate || aladinBook.publishedDate,
+        description: book.description || aladinBook.description,
+        aladinItemId: aladinBook.aladinItemId,
+        aladinLink: aladinBook.aladinLink,
+        thumbnailUrl: aladinBook.thumbnailUrl || book.thumbnailUrl,
+        coverProvider: aladinBook.thumbnailUrl ? "aladin" : book.coverProvider,
+        updatedAt: Date.now()
+      });
+      persist();
+
+      if ($("#bookPage").classList.contains("active") && state.selectedBookId === bookId) {
+        renderBookDetail();
+      }
+    }
+
+    function renderConnections(edges, bookKey) {
+      if (!edges.length) return `<div class="empty">아직 연결이 없습니다.</div>`;
+      return edges.map((item) => {
+        const book = getBook(item[bookKey]);
+        return `
+          <div class="connection">
+            <button class="ghost" data-open-book="${book.id}">${escapeHtml(book.title)}</button>
+            <span class="pill">${item.count}</span>
+          </div>
+        `;
+      }).join("");
+    }
+
+    async function addReadingEdge(fromBookId, toBookId) {
+      if (!currentUser.signedIn) {
+        showToast("로그인한 사용자만 독서 경로를 추가할 수 있습니다.");
+        return false;
+      }
+      if (fromBookId === toBookId) {
+        showToast("같은 책으로는 경로를 만들 수 없습니다.");
+        return false;
+      }
+      const duplicate = state.edges.some((item) =>
+        item.userId === currentUser.id &&
+        item.fromBookId === fromBookId &&
+        item.toBookId === toBookId
+      );
+      if (duplicate) {
+        showToast("이미 같은 경로를 추가했습니다.");
+        return false;
+      }
+
+      if (firebaseReady) {
+        try {
+          const duplicateQuery = query(
+            collection(firebase.db, "readingEdges"),
+            where("userId", "==", currentUser.id),
+            where("fromBookId", "==", fromBookId),
+            where("toBookId", "==", toBookId),
+            limit(1)
+          );
+          const duplicateSnap = await getDocs(duplicateQuery);
+          if (!duplicateSnap.empty) {
+            showToast("이미 같은 경로를 추가했습니다.");
+            return false;
+          }
+        } catch (error) {
+          showError("중복 독서 경로 확인에 실패했습니다.", error, "readingEdges/check");
+          return false;
+        }
+      }
+
+      const localEdge = {
+        id: `${currentUser.id}_${fromBookId}_${toBookId}`,
+        fromBookId,
+        toBookId,
+        userId: currentUser.id,
+        submittedByAuthUid: currentUser.id,
+        submittedByNickname: currentUser.nickname || currentUser.displayName,
+        isTestData: false,
+        dataSource: "user",
+        createdAt: Date.now()
+      };
+
+      if (firebaseReady) {
+        try {
+          await setDoc(doc(firebase.db, "readingEdges", localEdge.id), {
+            fromBookId,
+            toBookId,
+            userId: currentUser.id,
+            submittedByAuthUid: currentUser.id,
+            submittedByNickname: currentUser.nickname || currentUser.displayName,
+            isTestData: false,
+            dataSource: "user",
+            createdAt: serverTimestamp()
+          });
+        } catch (error) {
+          showError("독서 경로 저장에 실패했습니다.", error, "readingEdges/write");
+          return false;
+        }
+      }
+
+      state.edges.push(localEdge);
+      persist();
+      showToast("독서 경로를 추가했습니다.");
+      return true;
+    }
+
+    async function saveRating(bookId, rating) {
+      if (!currentUser.signedIn) {
+        showToast("로그인한 사용자만 별점을 남길 수 있습니다.");
+        return;
+      }
+
+      const score = Number(rating);
+      if (!Number.isInteger(score) || score < 1 || score > 5) {
+        showToast("별점은 1점부터 5점까지 선택할 수 있습니다.");
+        return;
+      }
+
+      const ratingId = `${currentUser.id}_${bookId}`;
+      const ratingItem = {
+        id: ratingId,
+        bookId,
+        userId: currentUser.id,
+        submittedByAuthUid: currentUser.id,
+        submittedByNickname: currentUser.nickname || currentUser.displayName,
+        rating: score,
+        isTestData: false,
+        dataSource: "user",
+        updatedAt: Date.now()
+      };
+
+      if (firebaseReady) {
+        try {
+          await setDoc(doc(firebase.db, "bookRatings", ratingId), {
+            bookId,
+            userId: currentUser.id,
+            submittedByAuthUid: currentUser.id,
+            submittedByNickname: currentUser.nickname || currentUser.displayName,
+            rating: score,
+            isTestData: false,
+            dataSource: "user",
+            updatedAt: serverTimestamp()
+          }, { merge: true });
+        } catch (error) {
+          showError("별점 저장에 실패했습니다.", error, "bookRatings/write");
+          return;
+        }
+      }
+
+      const existingIndex = state.ratings.findIndex((item) => item.id === ratingId);
+      if (existingIndex >= 0) {
+        state.ratings[existingIndex] = ratingItem;
+      } else {
+        state.ratings.push(ratingItem);
+      }
+      persist();
+      renderBookDetail();
+      showToast("별점을 저장했습니다.");
+    }
+
+    async function deleteRating(bookId) {
+      if (!currentUser.signedIn) {
+        showToast("로그인 후 내 별점을 삭제할 수 있습니다.");
+        return;
+      }
+
+      const ratingId = `${currentUser.id}_${bookId}`;
+      if (firebaseReady) {
+        try {
+          await deleteDoc(doc(firebase.db, "bookRatings", ratingId));
+        } catch (error) {
+          showError("별점 삭제에 실패했습니다.", error, "bookRatings/delete");
+          return;
+        }
+      }
+
+      state.ratings = state.ratings.filter((item) => item.id !== ratingId);
+      persist();
+      renderBookDetail();
+      showToast("내 별점을 삭제했습니다.");
+    }
+
+    async function saveComment(bookId, text, parentCommentId = "") {
+      if (!currentUser.signedIn) {
+        showToast("로그인한 사용자만 댓글을 남길 수 있습니다.");
+        return;
+      }
+
+      const cleanText = String(text || "").trim();
+      if (!cleanText) {
+        showToast("댓글 내용을 입력해 주세요.");
+        return;
+      }
+      if (cleanText.length > 600) {
+        showToast("댓글은 600자까지 입력할 수 있습니다.");
+        return;
+      }
+
+      const parent = parentCommentId ? state.comments.find((item) => item.id === parentCommentId) : null;
+      if (parentCommentId && (!parent || parent.parentCommentId)) {
+        showToast("대댓글은 댓글 아래에만 1단계로 달 수 있습니다.");
+        return;
+      }
+
+      const commentId = `${currentUser.id}_${bookId}_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
+      const comment = {
+        id: commentId,
+        bookId,
+        parentCommentId: parentCommentId || null,
+        depth: parentCommentId ? 1 : 0,
+        text: cleanText,
+        userId: currentUser.id,
+        submittedByAuthUid: currentUser.id,
+        nickname: currentUser.nickname || currentUser.displayName,
+        isTestData: false,
+        dataSource: "user",
+        createdAt: Date.now()
+      };
+
+      if (firebaseReady) {
+        try {
+          await setDoc(doc(firebase.db, "bookComments", commentId), {
+            bookId: comment.bookId,
+            parentCommentId: comment.parentCommentId,
+            depth: comment.depth,
+            text: comment.text,
+            userId: comment.userId,
+            submittedByAuthUid: comment.submittedByAuthUid,
+            nickname: comment.nickname,
+            isTestData: false,
+            dataSource: "user",
+            createdAt: serverTimestamp()
+          });
+        } catch (error) {
+          showError("댓글 저장에 실패했습니다.", error, "bookComments/write");
+          return;
+        }
+      }
+
+      state.comments.push(comment);
+      state.activeReplyCommentId = null;
+      persist();
+      renderBookDetail();
+      showToast(parentCommentId ? "대댓글을 등록했습니다." : "댓글을 등록했습니다.");
+    }
+
+    async function deleteComment(commentId) {
+      if (!currentUser.signedIn) {
+        showToast("로그인 후 내 댓글을 삭제할 수 있습니다.");
+        return;
+      }
+      const comment = state.comments.find((item) => item.id === commentId);
+      if (!comment || comment.userId !== currentUser.id) {
+        showToast("내 댓글만 삭제할 수 있습니다.");
+        return;
+      }
+
+      const childReplies = state.comments.filter((item) => item.parentCommentId === commentId);
+      if (childReplies.length) {
+        showToast("대댓글이 있는 댓글은 아직 삭제할 수 없습니다.");
+        return;
+      }
+      if (firebaseReady) {
+        try {
+          await deleteDoc(doc(firebase.db, "bookComments", commentId));
+        } catch (error) {
+          showError("댓글 삭제에 실패했습니다.", error, "bookComments/delete");
+          return;
+        }
+      }
+
+      state.comments = state.comments.filter((item) => item.id !== commentId);
+      if (state.activeReplyCommentId === commentId) state.activeReplyCommentId = null;
+      persist();
+      renderBookDetail();
+      showToast("댓글을 삭제했습니다.");
+    }
+
+    function renderGraph() {
+      const aggregates = aggregateEdges();
+      const center = getBook(ensureGraphCenter(aggregates));
+      if (!center) {
+        $("#graphSummary").textContent = "아직 저장된 책이 없습니다.";
+        $("#graphSvg").innerHTML = `<text x="500" y="310" text-anchor="middle" fill="#7f6657" font-size="18" font-weight="800">검색에서 책을 먼저 추가해 주세요.</text>`;
+        return;
+      }
+      state.selectedBookId = center.id;
+      const graph = buildGraph(center.id, aggregates);
+      if (state.graphCenterId !== center.id || state.graphNodeCount !== graph.nodes.length) {
+        state.graphCenterId = center.id;
+        state.graphNodeCount = graph.nodes.length;
+        resetGraphViewport(graph);
+      }
+      const orphanText = graph.orphanCount ? ` · 독립 책 ${graph.orphanCount}권 포함` : "";
+      $("#graphSummary").textContent = `전체 그래프 · ${graph.nodes.length}권 · ${graph.edges.length}개 연결 · 강조: ${center.title}${orphanText}`;
+      syncGraphHighlightToggle();
+      drawGraph(graph, center.id);
+    }
+
+    function syncGraphHighlightToggle() {
+      $all("input[name='graphMyPathHighlight']").forEach((input) => {
+        input.checked = state.highlightMyPaths
+          ? input.value === "on"
+          : input.value === "off";
+      });
+    }
+
+    function buildGraph(centerId, aggregates = aggregateEdges()) {
+      const nodeIds = new Set(state.books.map((book) => book.id));
+      const referencedBookIds = new Set();
+      aggregates.forEach((edge) => {
+        referencedBookIds.add(edge.fromBookId);
+        referencedBookIds.add(edge.toBookId);
+        nodeIds.add(edge.fromBookId);
+        nodeIds.add(edge.toBookId);
+      });
+      const orphanBooks = state.books.filter((book) => !referencedBookIds.has(book.id));
+      const nodes = Array.from(nodeIds).map(getBook).filter(Boolean);
+      const columns = Math.ceil(Math.sqrt(Math.max(nodes.length, 1) * 1.6));
+      const rows = Math.ceil(Math.max(nodes.length, 1) / Math.max(columns, 1));
+      return {
+        nodes,
+        edges: aggregates,
+        orphanCount: orphanBooks.length,
+        width: Math.max(1000, columns * 185),
+        height: Math.max(620, rows * 155)
+      };
+    }
+
+    function drawGraph(graph, centerId, targetSvg = $("#graphSvg")) {
+      const svg = targetSvg;
+      const width = graph.width || 1000;
+      const height = graph.height || 620;
+      const isInteractive = svg.id === "graphSvg";
+      if (isInteractive) {
+        applyGraphViewport();
+      } else {
+        svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+      }
+      const centerX = width / 2;
+      const centerY = height / 2;
+      const others = graph.nodes.filter((node) => node.id !== centerId);
+      const radius = Math.min(Math.min(width, height) * 0.42, Math.max(180, 125 + others.length * 11));
+      const layoutNodes = graph.nodes.map((node) => {
+        const labelLines = wrapLabel(node.title);
+        return {
+          ...node,
+          labelLines,
+          labelWidth: estimateLabelWidthFromLines(labelLines),
+          labelHeight: labelLines.length * 17 + 10
+        };
+      });
+      const layoutById = new Map(layoutNodes.map((node) => [node.id, node]));
+      const positions = new Map();
+      positions.set(centerId, { x: centerX, y: centerY, fixed: true });
+      others.forEach((node, index) => {
+        const angle = (Math.PI * 2 * index) / Math.max(others.length, 1) - Math.PI / 2;
+        positions.set(node.id, {
+          x: centerX + Math.cos(angle) * radius,
+          y: centerY + Math.sin(angle) * radius,
+          vx: 0,
+          vy: 0
+        });
+      });
+      relaxGraphPositions(graph, centerId, positions, layoutById, width, height);
+
+      const maxCount = Math.max(1, ...graph.edges.map((edge) => edge.count));
+      const minCount = Math.min(...graph.edges.map((edge) => edge.count), maxCount);
+      const countRange = Math.max(1, maxCount - minCount);
+      const defs = `
+        <defs>
+          <marker id="graphArrow" markerWidth="5" markerHeight="4" refX="4.5" refY="2" orient="auto" markerUnits="userSpaceOnUse">
+            <path d="M0,0 L5,2 L0,4 Z" fill="#d8aa86"></path>
+          </marker>
+          <marker id="graphArrowMuted" markerWidth="5" markerHeight="4" refX="4.5" refY="2" orient="auto" markerUnits="userSpaceOnUse">
+            <path d="M0,0 L5,2 L0,4 Z" fill="#c8c3bd"></path>
+          </marker>
+        </defs>
+      `;
+      const lines = graph.edges.map((edge) => {
+        const from = positions.get(edge.fromBookId);
+        const to = positions.get(edge.toBookId);
+        if (!from || !to) return "";
+        const linkedToCenter = edge.fromBookId === centerId || edge.toBookId === centerId;
+        const relativeWeight = (edge.count - minCount) / countRange;
+        const width = 0.8 + relativeWeight * 4.2;
+        const highlightMine = isInteractive && state.highlightMyPaths && currentUser.signedIn;
+        const isMyPath = edge.myCount > 0;
+        const lineColor = highlightMine && isMyPath ? "#d8aa86" : "#c8c3bd";
+        const marker = highlightMine && isMyPath ? "graphArrow" : "graphArrowMuted";
+        const opacity = highlightMine && isMyPath ? 1 : 0.78;
+        return `
+          <g class="${linkedToCenter ? "" : "dim"}">
+            <line x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}" stroke="${lineColor}" stroke-width="${width}" stroke-linecap="round" stroke-opacity="${opacity}" marker-end="url(#${marker})"></line>
+          </g>
+        `;
+      }).join("");
+
+      const nodes = graph.nodes.map((node) => {
+        const pos = positions.get(node.id);
+        const isCenter = node.id === centerId;
+        const direct = graph.edges.some((edge) =>
+          (edge.fromBookId === centerId && edge.toBookId === node.id) ||
+          (edge.toBookId === centerId && edge.fromBookId === node.id)
+        );
+        const r = isCenter ? 6 : direct ? 4.5 : 3.5;
+        const fill = isCenter ? "#c99068" : direct ? "#d8aa86" : "#ead0bd";
+        const stroke = isCenter ? "#b97d58" : direct ? "#c99068" : "#ead0bd";
+        const layoutNode = layoutById.get(node.id);
+        const labelLines = layoutNode.labelLines;
+        const labelWidth = layoutNode.labelWidth;
+        const labelHeight = layoutNode.labelHeight;
+        const labelX = -(labelWidth / 2);
+        const labelY = labelOffsetY(pos, width, height, labelHeight);
+        const textStartY = labelY + 18;
+        const tspans = labelLines.map((line, index) =>
+          `<tspan x="0" dy="${index === 0 ? 0 : 17}">${escapeHtml(line)}</tspan>`
+        ).join("");
+        return `
+          <g class="node ${isCenter || direct ? "" : "dim"}" data-center-book="${node.id}" transform="translate(${pos.x}, ${pos.y})">
+            <circle r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="1.5"></circle>
+            <rect class="node-label-bg" x="${labelX}" y="${labelY}" width="${labelWidth}" height="${labelHeight}"></rect>
+            <text class="node-label" x="0" y="${textStartY}" text-anchor="middle" fill="#20242d">${tspans}</text>
+          </g>
+        `;
+      }).join("");
+
+      svg.innerHTML = `${defs}${lines}${nodes}`;
+    }
+
+    function relaxGraphPositions(graph, centerId, positions, layoutById, width, height) {
+      const nodes = graph.nodes.filter((node) => node.id !== centerId);
+      if (nodes.length < 2) return;
+      const linked = new Set(graph.edges.flatMap((edge) => [edge.fromBookId, edge.toBookId]));
+      const edgeLength = Math.max(135, Math.min(230, 285 - nodes.length * 4));
+
+      for (let step = 0; step < 120; step += 1) {
+        nodes.forEach((a, index) => {
+          const pa = positions.get(a.id);
+          nodes.slice(index + 1).forEach((b) => {
+            const pb = positions.get(b.id);
+            const dx = pa.x - pb.x || 0.01;
+            const dy = pa.y - pb.y || 0.01;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            const force = Math.min(18, 2600 / (distance * distance));
+            const nx = dx / distance;
+            const ny = dy / distance;
+            pa.x += nx * force;
+            pa.y += ny * force;
+            pb.x -= nx * force;
+            pb.y -= ny * force;
+          });
+        });
+
+        graph.edges.forEach((edge) => {
+          const from = positions.get(edge.fromBookId);
+          const to = positions.get(edge.toBookId);
+          if (!from || !to) return;
+          const dx = to.x - from.x;
+          const dy = to.y - from.y;
+          const distance = Math.sqrt(dx * dx + dy * dy) || 1;
+          const pull = (distance - edgeLength) * 0.012 * Math.min(3, edge.count);
+          const nx = dx / distance;
+          const ny = dy / distance;
+          if (!from.fixed) {
+            from.x += nx * pull;
+            from.y += ny * pull;
+          }
+          if (!to.fixed) {
+            to.x -= nx * pull;
+            to.y -= ny * pull;
+          }
+        });
+
+        nodes.forEach((node) => {
+          const pos = positions.get(node.id);
+          const connected = linked.has(node.id);
+          const gravity = connected ? 0.018 : 0.008;
+          pos.x += (width / 2 - pos.x) * gravity;
+          pos.y += (height / 2 - pos.y) * gravity;
+          pos.x = Math.max(95, Math.min(width - 95, pos.x));
+          pos.y = Math.max(80, Math.min(height - 70, pos.y));
+        });
+
+        resolveLabelCollisions(graph.nodes, centerId, positions, layoutById, width, height);
+      }
+    }
+
+    function resolveLabelCollisions(nodes, centerId, positions, layoutById, width, height) {
+      const padding = 10;
+      nodes.forEach((a, index) => {
+        nodes.slice(index + 1).forEach((b) => {
+          const pa = positions.get(a.id);
+          const pb = positions.get(b.id);
+          if (!pa || !pb) return;
+          const rectA = labelRect(pa, layoutById.get(a.id), width, height, padding);
+          const rectB = labelRect(pb, layoutById.get(b.id), width, height, padding);
+          const overlapX = Math.min(rectA.right, rectB.right) - Math.max(rectA.left, rectB.left);
+          const overlapY = Math.min(rectA.bottom, rectB.bottom) - Math.max(rectA.top, rectB.top);
+          if (overlapX <= 0 || overlapY <= 0) return;
+
+          const dx = rectA.cx - rectB.cx || pa.x - pb.x || 0.01;
+          const dy = rectA.cy - rectB.cy || pa.y - pb.y || 0.01;
+          const length = Math.sqrt(dx * dx + dy * dy) || 1;
+          const move = Math.min(18, Math.min(overlapX, overlapY) * 0.72 + 3);
+          const mx = (dx / length) * move;
+          const my = (dy / length) * move;
+
+          if (a.id !== centerId) {
+            pa.x += mx;
+            pa.y += my;
+          }
+          if (b.id !== centerId) {
+            pb.x -= mx;
+            pb.y -= my;
+          }
+          clampGraphPosition(pa, layoutById.get(a.id), width, height);
+          clampGraphPosition(pb, layoutById.get(b.id), width, height);
+        });
+      });
+    }
+
+    function labelRect(pos, node, width, height, padding = 0) {
+      const y = pos.y + labelOffsetY(pos, width, height, node.labelHeight);
+      const left = pos.x - node.labelWidth / 2 - padding;
+      const top = y - padding;
+      const right = pos.x + node.labelWidth / 2 + padding;
+      const bottom = y + node.labelHeight + padding;
+      return {
+        left,
+        top,
+        right,
+        bottom,
+        cx: (left + right) / 2,
+        cy: (top + bottom) / 2
+      };
+    }
+
+    function labelOffsetY(pos, width, height, labelHeight) {
+      const dy = pos.y - height / 2;
+      if (Math.abs(dy) < 76) return 12;
+      return dy < 0 ? -(labelHeight + 12) : 14;
+    }
+
+    function clampGraphPosition(pos, node, width, height) {
+      const marginX = Math.max(90, node.labelWidth / 2 + 16);
+      const marginY = node.labelHeight + 34;
+      pos.x = Math.max(marginX, Math.min(width - marginX, pos.x));
+      pos.y = Math.max(marginY, Math.min(height - marginY, pos.y));
+    }
+
+    function resetGraphViewport(graph = null) {
+      state.graphViewport = {
+        x: 0,
+        y: 0,
+        width: graph?.width || 1000,
+        height: graph?.height || 620
+      };
+      applyGraphViewport();
+    }
+
+    function applyGraphViewport() {
+      const svg = $("#graphSvg");
+      if (!svg) return;
+      const view = state.graphViewport;
+      svg.setAttribute("viewBox", `${view.x} ${view.y} ${view.width} ${view.height}`);
+    }
+
+    function wrapLabel(text) {
+      const chars = Array.from(String(text || ""));
+      const lines = [];
+      let current = "";
+      let units = 0;
+      const maxUnits = 12;
+
+      chars.forEach((char) => {
+        const charUnits = /[ -~]/.test(char) ? 0.58 : 1;
+        if (current && units + charUnits > maxUnits && lines.length < 2) {
+          lines.push(current.trim());
+          current = char;
+          units = charUnits;
+        } else {
+          current += char;
+          units += charUnits;
+        }
+      });
+
+      if (current) lines.push(current.trim());
+      if (lines.length > 2) {
+        lines[1] = `${lines[1].slice(0, 11)}…`;
+        return lines.slice(0, 2);
+      }
+      return lines;
+    }
+
+    function estimateLabelWidthFromLines(lines) {
+      const maxUnits = lines.reduce((max, line) => {
+        const units = Array.from(line).reduce((sum, char) => {
+          return sum + (/[ -~]/.test(char) ? 0.58 : 1);
+        }, 0);
+        return Math.max(max, units);
+      }, 0);
+      return Math.max(58, Math.min(210, Math.round(maxUnits * 14 + 18)));
+    }
+
+    function renderMe() {
+      const myEdges = state.edges
+        .filter((item) => item.userId === currentUser.id)
+        .sort((a, b) => b.createdAt - a.createdAt);
+      $("#meSummary").textContent = currentUser.signedIn ? `${myEdges.length}개 경로` : "로그인하면 직접 추가한 경로가 표시됩니다.";
+      $("#meProfile").innerHTML = currentUser.signedIn ? `
+        <form id="profileForm" class="card profile-card">
+          <label>
+            별명
+            <input name="nickname" value="${escapeHtml(currentUser.nickname || currentUser.displayName || "")}" maxlength="24" autocomplete="nickname" placeholder="댓글과 추천에 표시될 이름" />
+          </label>
+          <button class="secondary" type="submit">저장</button>
+        </form>
+      ` : "";
+      $("#myPaths").innerHTML = myEdges.map((item) => renderPathCard(item, true)).join("") || `<div class="empty">아직 내가 추가한 독서 경로가 없습니다.</div>`;
+    }
+
+    function openModal(bookId, direction = "next") {
+      if (!currentUser.signedIn) {
+        showToast("로그인한 사용자만 독서 경로를 추가할 수 있습니다.");
+        return;
+      }
+      state.modalBookId = bookId;
+      state.modalDirection = direction;
+      state.modalFromBookId = direction === "next" ? bookId : null;
+      $("#bookModalTitle").textContent = direction === "next" ? "다음에 읽은 책 추가" : "전에 읽은 책 추가";
+      $("#bookModal").classList.add("active");
+      $("#bookModal").setAttribute("aria-hidden", "false");
+      $("#modalResults").innerHTML = state.books.slice(0, 8).map((book) => renderBookCard(book, "connect")).join("");
+    }
+
+    function closeModal() {
+      $("#bookModal").classList.remove("active");
+      $("#bookModal").setAttribute("aria-hidden", "true");
+      $("#modalSearchForm")?.reset();
+      $("#modalResults").innerHTML = "";
+    }
+
+    document.addEventListener("click", async (event) => {
+      if (event.target.closest("[data-copy-errors]")) {
+        const text = $("#errorLog").textContent.trim();
+        if (!text) {
+          showToast("복사할 오류 로그가 없습니다.");
+          return;
+        }
+        try {
+          await navigator.clipboard.writeText(text);
+          showToast("오류 로그를 복사했습니다.");
+        } catch (error) {
+          showError("오류 로그 복사에 실패했습니다.", error, "log/copy");
+        }
+        return;
+      }
+
+      if (event.target.closest("[data-clear-errors]")) {
+        $("#errorLog").textContent = "";
+        $("#errorPanel").classList.remove("active");
+        return;
+      }
+
+      const route = event.target.closest("[data-route]");
+      if (route) {
+        setPage(route.dataset.route);
+        return;
+      }
+
+      const searchQuery = event.target.closest("[data-search-query]");
+      if (searchQuery) {
+        searchFromKeyword(searchQuery.dataset.searchQuery);
+        return;
+      }
+
+      const bookAction = event.target.closest("[data-book-action]");
+      if (bookAction) {
+        const existingBook = getBook(bookAction.dataset.bookId);
+        const candidate = existingBook || upsertBook(findRenderedBook(bookAction.dataset.bookId));
+        if (!candidate) return;
+        if (bookAction.dataset.bookAction === "connect") {
+          const fromBookId = state.modalDirection === "next" ? state.modalBookId : candidate.id;
+          const toBookId = state.modalDirection === "next" ? candidate.id : state.modalBookId;
+          if (await addReadingEdge(fromBookId, toBookId)) {
+            closeModal();
+            renderBookDetail();
+          }
+          return;
+        }
+        if (bookAction.dataset.bookAction === "save") {
+          showToast(existingBook ? "이미 추가된 책입니다." : "책을 추가했습니다.");
+          handleSearch($("#searchPage [data-search-form]"), "#searchResults");
+          renderHome();
+          return;
+        }
+        state.selectedBookId = candidate.id;
+        setPage("book");
+        return;
+      }
+
+      const centerBook = event.target.closest("[data-center-book]");
+      if (centerBook) {
+        state.selectedBookId = centerBook.dataset.centerBook;
+        if ($("#graphPage").classList.contains("active")) {
+          renderGraph();
+        } else {
+          setPage("graph");
+        }
+        return;
+      }
+
+      const openBook = event.target.closest("[data-open-book]");
+      if (openBook) {
+        state.selectedBookId = openBook.dataset.openBook;
+        setPage("book");
+        return;
+      }
+
+      const openGraph = event.target.closest("[data-open-graph]");
+      if (openGraph) {
+        state.selectedBookId = openGraph.dataset.openGraph;
+        setPage("graph");
+        return;
+      }
+
+      const rateBook = event.target.closest("[data-rate-book]");
+      if (rateBook) {
+        await saveRating(rateBook.dataset.rateBook, rateBook.dataset.rating);
+        return;
+      }
+
+      const deleteRatingButton = event.target.closest("[data-delete-rating]");
+      if (deleteRatingButton) {
+        await deleteRating(deleteRatingButton.dataset.deleteRating);
+        return;
+      }
+
+      const deleteCommentButton = event.target.closest("[data-delete-comment]");
+      if (deleteCommentButton) {
+        await deleteComment(deleteCommentButton.dataset.deleteComment);
+        return;
+      }
+
+      const addNext = event.target.closest("[data-add-next]");
+      if (addNext) {
+        openModal(addNext.dataset.addNext, "next");
+        return;
+      }
+
+      const addPrevious = event.target.closest("[data-add-previous]");
+      if (addPrevious) {
+        openModal(addPrevious.dataset.addPrevious, "previous");
+        return;
+      }
+
+      if (event.target.closest("[data-close-modal]")) {
+        closeModal();
+        return;
+      }
+
+      const deleteEdge = event.target.closest("[data-delete-edge]");
+      if (deleteEdge) {
+        if (!currentUser.signedIn) {
+          showToast("로그인 후 내 독서 경로를 삭제할 수 있습니다.");
+          return;
+        }
+        const edge = state.edges.find((item) => item.id === deleteEdge.dataset.deleteEdge);
+        if (!edge || edge.userId !== currentUser.id) {
+          showToast("내가 추가한 독서 경로만 삭제할 수 있습니다.");
+          return;
+        }
+        if (firebaseReady) {
+          try {
+            await deleteDoc(doc(firebase.db, "readingEdges", deleteEdge.dataset.deleteEdge));
+          } catch (error) {
+            showError("독서 경로 삭제에 실패했습니다.", error, "readingEdges/delete");
+            return;
+          }
+        }
+        state.edges = state.edges.filter((item) => item.id !== deleteEdge.dataset.deleteEdge);
+        persist();
+        renderMe();
+        renderHome();
+        showToast("독서 경로를 삭제했습니다.");
+      }
+    });
+
+    document.addEventListener("dblclick", (event) => {
+      if (event.target.closest("button, textarea, input, form")) return;
+      const graphBook = event.target.closest("[data-center-book]");
+      if (graphBook) {
+        state.selectedBookId = graphBook.dataset.centerBook;
+        setPage("book");
+        return;
+      }
+
+      const replyTarget = event.target.closest("[data-reply-target]");
+      if (!replyTarget) return;
+      if (!currentUser.signedIn) {
+        showToast("로그인하면 대댓글을 남길 수 있습니다.");
+        return;
+      }
+      state.activeReplyCommentId = replyTarget.dataset.replyTarget;
+      renderBookDetail();
+      setTimeout(() => {
+        const form = $(`[data-parent-comment="${state.activeReplyCommentId}"]`);
+        form?.querySelector("textarea")?.focus();
+      }, 0);
+    });
+
+    document.addEventListener("submit", async (event) => {
+      if (event.target.id === "profileForm") {
+        event.preventDefault();
+        const nickname = new FormData(event.target).get("nickname");
+        await saveUserProfile(nickname);
+        return;
+      }
+
+      const commentForm = event.target.closest("[data-comment-form]");
+      if (commentForm) {
+        event.preventDefault();
+        const formData = new FormData(commentForm);
+        await saveComment(
+          commentForm.dataset.commentForm,
+          formData.get("text"),
+          commentForm.dataset.parentComment || ""
+        );
+      }
+    });
+
+    $all("[data-search-form]").forEach((form) => {
+      form.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const query = new FormData(form).get("q");
+        $("#searchInput").value = query;
+        setPage("search");
+        handleSearch($("#searchPage [data-search-form]"), "#searchResults");
+      });
+    });
+
+    $("#modalSearchForm").addEventListener("submit", (event) => {
+      event.preventDefault();
+      handleSearch(event.currentTarget, "#modalResults", "connect");
+    });
+
+    $("#authButton").addEventListener("click", async () => {
+      if (firebaseReady) {
+        try {
+          if (currentUser.signedIn) {
+            showAuthLog("logout-start");
+            await signOut(firebase.auth);
+            showAuthLog("logout-complete");
+            showToast("로그아웃했습니다.");
+          } else {
+            await startGoogleLogin();
+            if (!isMobileBrowser()) showToast("Google 계정으로 로그인했습니다.");
+          }
+        } catch (error) {
+          showError("로그인 처리에 실패했습니다.", error, "auth");
+        }
+        return;
+      }
+
+      currentUser.signedIn = !currentUser.signedIn;
+      $("#authButton").textContent = currentUser.signedIn ? "로그아웃" : "Google 로그인";
+      showToast(currentUser.signedIn ? "데모 사용자로 로그인했습니다." : "로그아웃했습니다.");
+      renderMe();
+    });
+
+    $("#graphSearchButton").addEventListener("click", () => {
+      const query = $("#graphSearchInput").value;
+      const match = searchLocalBooks(query)[0];
+      if (!match) {
+        showToast("먼저 검색 화면에서 책을 저장해 주세요.");
+        return;
+      }
+      state.selectedBookId = match.id;
+      renderGraph();
+    });
+
+    $("#expandGraphButton").addEventListener("click", () => {
+      resetGraphViewport(buildGraph(ensureGraphCenter()));
+    });
+
+    $all("input[name='graphMyPathHighlight']").forEach((input) => {
+      input.addEventListener("click", (event) => {
+        if (state.highlightMyPaths === (event.currentTarget.value === "on")) return;
+        state.highlightMyPaths = event.currentTarget.value === "on";
+        syncGraphHighlightToggle();
+        renderGraph();
+      });
+    });
+
+    $("#graphSvg").addEventListener("wheel", (event) => {
+      event.preventDefault();
+      const svg = event.currentTarget;
+      const point = svgPoint(svg, event.clientX, event.clientY);
+      const view = state.graphViewport;
+      const zoom = event.deltaY > 0 ? 1.13 : 0.88;
+      const nextWidth = clamp(view.width * zoom, 300, 1700);
+      const nextHeight = nextWidth * 0.62;
+      const ratioX = (point.x - view.x) / view.width;
+      const ratioY = (point.y - view.y) / view.height;
+      state.graphViewport = {
+        x: point.x - nextWidth * ratioX,
+        y: point.y - nextHeight * ratioY,
+        width: nextWidth,
+        height: nextHeight
+      };
+      applyGraphViewport();
+    }, { passive: false });
+
+    $("#graphSvg").addEventListener("pointerdown", (event) => {
+      if (event.target.closest("[data-center-book]")) return;
+      const svg = event.currentTarget;
+      svg.setPointerCapture(event.pointerId);
+      svg.classList.add("is-panning");
+      state.graphDrag = {
+        pointerId: event.pointerId,
+        clientX: event.clientX,
+        clientY: event.clientY,
+        start: { ...state.graphViewport }
+      };
+    });
+
+    $("#graphSvg").addEventListener("pointermove", (event) => {
+      const drag = state.graphDrag;
+      if (!drag || drag.pointerId !== event.pointerId) return;
+      const svg = event.currentTarget;
+      const rect = svg.getBoundingClientRect();
+      const dx = (event.clientX - drag.clientX) * (drag.start.width / rect.width);
+      const dy = (event.clientY - drag.clientY) * (drag.start.height / rect.height);
+      state.graphViewport = {
+        ...drag.start,
+        x: drag.start.x - dx,
+        y: drag.start.y - dy
+      };
+      applyGraphViewport();
+    });
+
+    $("#graphSvg").addEventListener("pointerup", (event) => endGraphPan(event));
+    $("#graphSvg").addEventListener("pointercancel", (event) => endGraphPan(event));
+
+    function endGraphPan(event) {
+      const drag = state.graphDrag;
+      if (!drag || drag.pointerId !== event.pointerId) return;
+      event.currentTarget.classList.remove("is-panning");
+      state.graphDrag = null;
+    }
+
+    function svgPoint(svg, clientX, clientY) {
+      const point = svg.createSVGPoint();
+      point.x = clientX;
+      point.y = clientY;
+      return point.matrixTransform(svg.getScreenCTM().inverse());
+    }
+
+    function clamp(value, min, max) {
+      return Math.max(min, Math.min(max, value));
+    }
+
+    function findRenderedBook(id) {
+      return state.books.find((book) => book.id === id) || state.candidateBooks[id];
+    }
+
+    history.replaceState({
+      page: "home",
+      selectedBookId: state.selectedBookId,
+      highlightMyPaths: state.highlightMyPaths
+    }, "", location.href);
+
+    window.addEventListener("popstate", (event) => {
+      restoreAppHistory(event.state);
+    });
+
+    renderHome();
+    initFirebase();
+  </script>
+</body>
+</html>
