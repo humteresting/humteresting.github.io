@@ -1200,11 +1200,35 @@
     }
 
     function persist() {
-      localStorage.setItem("bookmesh.books", JSON.stringify(state.books));
-      localStorage.setItem("bookmesh.edges", JSON.stringify(state.edges));
-      localStorage.setItem("bookmesh.ratings", JSON.stringify(state.ratings));
-      localStorage.setItem("bookmesh.comments", JSON.stringify(state.comments));
-      localStorage.setItem("bookmesh.userBookIds", JSON.stringify(Array.from(state.userBookIds)));
+      persistToScope("bookmesh");
+      if (currentUser.signedIn) persistToScope(userCachePrefix(currentUser.id));
+    }
+
+    function persistToScope(prefix) {
+      localStorage.setItem(`${prefix}.books`, JSON.stringify(state.books));
+      localStorage.setItem(`${prefix}.edges`, JSON.stringify(state.edges));
+      localStorage.setItem(`${prefix}.ratings`, JSON.stringify(state.ratings));
+      localStorage.setItem(`${prefix}.comments`, JSON.stringify(state.comments));
+      localStorage.setItem(`${prefix}.userBookIds`, JSON.stringify(Array.from(state.userBookIds)));
+    }
+
+    function userCachePrefix(userId) {
+      return `bookmesh.user.${userId}`;
+    }
+
+    function resetStateForUser(userId = "") {
+      const prefix = userId ? userCachePrefix(userId) : "bookmesh";
+      state.books = load(`${prefix}.books`, []);
+      state.edges = load(`${prefix}.edges`, []);
+      state.ratings = load(`${prefix}.ratings`, []);
+      state.comments = load(`${prefix}.comments`, []);
+      state.userBookIds = new Set(load(`${prefix}.userBookIds`, []));
+      state.candidateBooks = {};
+      state.selectedBookId = null;
+      state.graphCenterId = null;
+      state.graphNodeCount = 0;
+      purgeLegacySampleData();
+      ensureGraphCenter();
     }
 
     async function initFirebase() {
@@ -1244,6 +1268,16 @@
           uid: user?.uid || null,
           email: user?.email || null
         });
+        const previousUserId = currentUser.signedIn ? currentUser.id : "";
+        const nextUserId = user?.uid || "";
+        if (previousUserId && previousUserId !== nextUserId) {
+          persistToScope(userCachePrefix(previousUserId));
+        }
+        if (nextUserId && previousUserId !== nextUserId) {
+          resetStateForUser(nextUserId);
+        } else if (!nextUserId && previousUserId) {
+          resetStateForUser("");
+        }
         currentUser.signedIn = Boolean(user);
         currentUser.id = user?.uid || "demo-user";
         currentUser.displayName = user?.displayName || "Demo Reader";
@@ -1258,6 +1292,9 @@
         }
 
         renderMe();
+        renderHome();
+        renderGraphSuggestions();
+        renderGraph();
         if ($("#bookPage").classList.contains("active")) renderBookDetail();
       });
 
