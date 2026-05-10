@@ -1132,6 +1132,7 @@
       edges: load("bookmesh.edges", seedEdges),
       ratings: load("bookmesh.ratings", []),
       comments: load("bookmesh.comments", []),
+      userBookIds: new Set(load("bookmesh.userBookIds", [])),
       candidateBooks: {},
       selectedBookId: null,
       modalFromBookId: null,
@@ -1203,6 +1204,7 @@
       localStorage.setItem("bookmesh.edges", JSON.stringify(state.edges));
       localStorage.setItem("bookmesh.ratings", JSON.stringify(state.ratings));
       localStorage.setItem("bookmesh.comments", JSON.stringify(state.comments));
+      localStorage.setItem("bookmesh.userBookIds", JSON.stringify(Array.from(state.userBookIds)));
     }
 
     async function initFirebase() {
@@ -1343,15 +1345,22 @@
     async function loadUserFirestoreData(userId) {
       if (!firebaseReady || !userId) return;
       try {
-        const [myBookSnap, myEdgeSnap] = await Promise.all([
+        const [myBookSnap, myEdgeSnap, userBookSnap] = await Promise.all([
           getDocs(query(collection(firebase.db, "books"), where("createdByAuthUid", "==", userId), limit(300))),
-          getDocs(query(collection(firebase.db, "readingEdges"), where("userId", "==", userId), limit(500)))
+          getDocs(query(collection(firebase.db, "readingEdges"), where("userId", "==", userId), limit(500))),
+          getDocs(query(collection(firebase.db, "userBooks"), where("userId", "==", userId), limit(500)))
         ]);
 
         const myBooks = myBookSnap.docs.map((item) => ({ id: item.id, ...item.data() }));
         const myEdges = myEdgeSnap.docs.map((item) => normalizeRemoteEdge(item.id, item.data()));
+        const userBookIds = userBookSnap.docs.map((item) => item.data().bookId).filter(Boolean);
+        myBooks.forEach((book) => state.userBookIds.add(book.id));
+        userBookIds.forEach((bookId) => state.userBookIds.add(bookId));
         const knownBookIds = new Set([...state.books, ...myBooks].map((book) => book.id));
-        const referencedBookIds = Array.from(new Set(myEdges.flatMap((edge) => [edge.fromBookId, edge.toBookId])))
+        const referencedBookIds = Array.from(new Set([
+          ...userBookIds,
+          ...myEdges.flatMap((edge) => [edge.fromBookId, edge.toBookId])
+        ]))
           .filter((bookId) => bookId && !knownBookIds.has(bookId));
         const referencedBooks = await Promise.all(
           referencedBookIds.map(async (bookId) => {
@@ -1361,7 +1370,7 @@
         );
 
         mergeRemoteData([...myBooks, ...referencedBooks.filter(Boolean)], myEdges);
-        showToast(`내 정보 ${myBooks.length + referencedBooks.filter(Boolean).length}권, 경로 ${myEdges.length}개를 동기화했습니다.`);
+        showToast(`내 정보 ${state.userBookIds.size}권, 경로 ${myEdges.length}개를 동기화했습니다.`);
       } catch (error) {
         showError("내 책과 경로 동기화에 실패했습니다.", error, "firestore/my-data");
       }
@@ -1417,6 +1426,25 @@
         ...bookItem,
         updatedAt: serverTimestamp()
       }, { merge: true });
+    }
+
+    async function saveUserBookToFirestore(bookItem) {
+      if (!currentUser.signedIn || !bookItem?.id) return false;
+      state.userBookIds.add(bookItem.id);
+      persist();
+      if (!firebaseReady) return true;
+      await setDoc(doc(firebase.db, "userBooks", `${currentUser.id}_${bookItem.id}`), {
+        userId: currentUser.id,
+        bookId: bookItem.id,
+        title: bookItem.title || null,
+        submittedByAuthUid: currentUser.id,
+        submittedByNickname: currentUser.nickname || currentUser.displayName,
+        isTestData: false,
+        dataSource: "user",
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      }, { merge: true });
+      return true;
     }
 
     function hydrateSeedData() {
@@ -1674,12 +1702,12 @@
     }
 
     function renderBookCard(book, action = "detail") {
-      const saved = Boolean(getBook(book.id));
+      const saved = currentUser.signedIn ? state.userBookIds.has(book.id) : Boolean(getBook(book.id));
       const actionButtons = action === "connect"
         ? `<button class="primary" data-book-action="connect" data-book-id="${book.id}">연결하기</button>`
         : `
             <button class="secondary" data-book-action="detail" data-book-id="${book.id}">책 정보</button>
-            <button class="primary" data-book-action="save" data-book-id="${book.id}">${saved ? "추가됨" : "이 책만 추가"}</button>
+            <button class="primary" data-book-action="save" data-book-id="${book.id}">${saved ? "내 책" : "이 책만 추가"}</button>
           `;
       return `
         <div class="card book-card">
@@ -2391,9 +2419,13 @@
         return null;
       }
       state.books.push(candidate);
+      state.userBookIds.add(candidate.id);
       persist();
       renderGraphSuggestions();
-      saveBookToFirestore(candidate).catch((error) => {
+      Promise.all([
+        saveBookToFirestore(candidate),
+        saveUserBookToFirestore(candidate)
+      ]).catch((error) => {
         showError("책은 로컬에 저장됐지만 Firestore 저장은 실패했습니다.", error, "books/write");
       });
       return candidate;
@@ -2654,6 +2686,8 @@
       }
 
       state.edges.push(localEdge);
+      Promise.all([getBook(fromBookId), getBook(toBookId)].filter(Boolean).map((book) => saveUserBookToFirestore(book)))
+        .catch((error) => showError("경로 책을 내 책에 저장하지 못했습니다.", error, "userBooks/path"));
       persist();
       showToast("독서 경로를 추가했습니다.");
       return true;
@@ -3245,7 +3279,13 @@
           return;
         }
         if (bookAction.dataset.bookAction === "save") {
-          showToast(existingBook ? "이미 추가된 책입니다." : "책을 추가했습니다.");
+          try {
+            await saveUserBookToFirestore(candidate);
+            showToast(state.userBookIds.has(candidate.id) ? "내 책에 추가했습니다." : "책을 추가했습니다.");
+          } catch (error) {
+            showError("내 책 저장에 실패했습니다.", error, "userBooks/write");
+            return;
+          }
           handleSearch($("#searchPage [data-search-form]"), "#searchResults");
           renderHome();
           return;
@@ -3428,7 +3468,14 @@
       const query = $("#graphSearchInput").value;
       const match = searchLocalBooks(query)[0];
       if (!match) {
-        showToast("먼저 검색 화면에서 책을 저장해 주세요.");
+        const clean = String(query || "").trim();
+        if (!clean) {
+          showToast("찾을 책 제목이나 저자명을 입력해 주세요.");
+          return;
+        }
+        if (window.confirm(`책이 없습니다.\n"${clean}" 책을 추가하시겠습니까?`)) {
+          searchFromKeyword(clean);
+        }
         return;
       }
       state.selectedBookId = match.id;
