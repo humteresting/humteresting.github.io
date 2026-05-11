@@ -3924,6 +3924,7 @@
 
     $("#graphSvg").addEventListener("pointerdown", (event) => {
       const svg = event.currentTarget;
+      if (event.pointerType === "touch" && state.graphTouchPinch) return;
       svg.setPointerCapture(event.pointerId);
       state.graphPointers.set(event.pointerId, {
         clientX: event.clientX,
@@ -3951,6 +3952,7 @@
     });
 
     $("#graphSvg").addEventListener("pointermove", (event) => {
+      if (event.pointerType === "touch" && state.graphTouchPinch) return;
       if (state.graphPointers.has(event.pointerId)) {
         state.graphPointers.set(event.pointerId, {
           clientX: event.clientX,
@@ -4011,6 +4013,7 @@
     $("#graphSvg").addEventListener("touchstart", (event) => {
       if (event.touches.length < 2) return;
       event.preventDefault();
+      state.graphPointers.clear();
       startGraphTouchPinch(event.currentTarget, event.touches);
     }, { passive: false });
 
@@ -4042,7 +4045,7 @@
       state.graphTouchPinch = {
         startDistance: distance,
         start: { ...state.graphViewport },
-        focus: svgPoint(svg, midpoint.clientX, midpoint.clientY)
+        focus: graphPointFromScreenRatio(svg, midpoint.clientX, midpoint.clientY, state.graphViewport)
       };
     }
 
@@ -4066,7 +4069,7 @@
         type: "pinch",
         startDistance: distance,
         start: { ...state.graphViewport },
-        focus: svgPoint(svg, midpoint.clientX, midpoint.clientY)
+        focus: graphPointFromScreenRatio(svg, midpoint.clientX, midpoint.clientY, state.graphViewport)
       };
     }
 
@@ -4117,6 +4120,14 @@
       return {
         x: clamp((clientX - rect.left) / rect.width, 0, 1),
         y: clamp((clientY - rect.top) / rect.height, 0, 1)
+      };
+    }
+
+    function graphPointFromScreenRatio(svg, clientX, clientY, view) {
+      const ratio = graphScreenRatio(svg, clientX, clientY);
+      return {
+        x: view.x + view.width * ratio.x,
+        y: view.y + view.height * ratio.y
       };
     }
 
