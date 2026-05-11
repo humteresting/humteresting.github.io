@@ -654,7 +654,7 @@
 
     .graph-toolbar {
       display: grid;
-      grid-template-columns: minmax(0, 1fr) auto auto auto;
+      grid-template-columns: minmax(0, 1fr) auto auto auto auto;
       gap: 10px;
       margin-bottom: 14px;
     }
@@ -678,6 +678,16 @@
       display: inline-flex;
       align-items: center;
       gap: 4px;
+    }
+
+    .graph-toggle select {
+      min-height: 30px;
+      border: 1px solid var(--line);
+      border-radius: 7px;
+      background: #fffaf6;
+      color: var(--ink);
+      font: inherit;
+      padding: 0 8px;
     }
 
     .graph-wrap {
@@ -1000,6 +1010,15 @@
           </div>
           <button id="graphSearchButton" class="secondary">책 찾기</button>
           <button id="expandGraphButton" class="ghost">전체 맞춤</button>
+          <label class="graph-toggle" for="graphHopDepthSelect">
+            연결단계
+            <select id="graphHopDepthSelect">
+              <option value="1">1홉</option>
+              <option value="2">2홉</option>
+              <option value="3">3홉</option>
+              <option value="all">전체</option>
+            </select>
+          </label>
           <span class="graph-toggle">
             <label><input type="radio" name="graphMyPathHighlight" value="on" checked /> 내경로강조</label>
             <label><input type="radio" name="graphMyPathHighlight" value="off" /> 전체</label>
@@ -1153,6 +1172,7 @@
       graphRenderedLayoutById: null,
       graphRenderedSize: null,
       suppressGraphClick: false,
+      graphHighlightHops: "1",
       highlightMyPaths: true,
       activeReplyCommentId: null,
       authDebugLog: []
@@ -1916,6 +1936,7 @@
       const historyState = {
         page,
         selectedBookId: state.selectedBookId,
+        graphHighlightHops: state.graphHighlightHops,
         highlightMyPaths: state.highlightMyPaths
       };
       const hash = page === "home" ? "" : `#${page}${state.selectedBookId ? `/${encodeURIComponent(state.selectedBookId)}` : ""}`;
@@ -1924,6 +1945,7 @@
 
     function restoreAppHistory(historyState) {
       if (historyState?.selectedBookId) state.selectedBookId = historyState.selectedBookId;
+      if (historyState?.graphHighlightHops) state.graphHighlightHops = historyState.graphHighlightHops;
       if (typeof historyState?.highlightMyPaths === "boolean") state.highlightMyPaths = historyState.highlightMyPaths;
       setPage(historyState?.page || "home", { push: false });
     }
@@ -2935,6 +2957,8 @@
     }
 
     function syncGraphHighlightToggle() {
+      const hopSelect = $("#graphHopDepthSelect");
+      if (hopSelect) hopSelect.value = state.graphHighlightHops;
       $all("input[name='graphMyPathHighlight']").forEach((input) => {
         input.checked = state.highlightMyPaths
           ? input.value === "on"
@@ -3025,6 +3049,16 @@
       const maxCount = Math.max(1, ...graph.edges.map((edge) => edge.count));
       const minCount = Math.min(...graph.edges.map((edge) => edge.count), maxCount);
       const countRange = Math.max(1, maxCount - minCount);
+      const hopDistances = getGraphHopDistances(graph, centerId);
+      const maxHighlightedHop = state.graphHighlightHops === "all" ? Infinity : Number(state.graphHighlightHops || 1);
+      const isNodeHighlighted = (bookId) => {
+        if (state.graphHighlightHops === "all") return true;
+        return (hopDistances.get(bookId) ?? Infinity) <= maxHighlightedHop;
+      };
+      const isEdgeHighlighted = (edge) => {
+        if (state.graphHighlightHops === "all") return true;
+        return isNodeHighlighted(edge.fromBookId) && isNodeHighlighted(edge.toBookId);
+      };
       const defs = `
         <defs>
           <marker id="graphArrow" markerWidth="5" markerHeight="4" refX="4.5" refY="2" orient="auto" markerUnits="userSpaceOnUse">
@@ -3039,7 +3073,7 @@
         const from = positions.get(edge.fromBookId);
         const to = positions.get(edge.toBookId);
         if (!from || !to) return "";
-        const linkedToCenter = edge.fromBookId === centerId || edge.toBookId === centerId;
+        const highlightedEdge = isEdgeHighlighted(edge);
         const relativeWeight = (edge.count - minCount) / countRange;
         const width = 0.8 + relativeWeight * 4.2;
         const highlightMine = isInteractive && state.highlightMyPaths && currentUser.signedIn;
@@ -3048,7 +3082,7 @@
         const marker = highlightMine && isMyPath ? "graphArrow" : "graphArrowMuted";
         const opacity = highlightMine && isMyPath ? 1 : 0.78;
         return `
-          <g class="${linkedToCenter ? "" : "dim"}">
+          <g class="${highlightedEdge ? "" : "dim"}">
             <line data-edge-from="${escapeHtml(edge.fromBookId)}" data-edge-to="${escapeHtml(edge.toBookId)}" x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}" stroke="${lineColor}" stroke-width="${width}" stroke-linecap="round" stroke-opacity="${opacity}" marker-end="url(#${marker})"></line>
           </g>
         `;
@@ -3057,13 +3091,10 @@
       const nodes = graph.nodes.map((node) => {
         const pos = positions.get(node.id);
         const isCenter = node.id === centerId;
-        const direct = graph.edges.some((edge) =>
-          (edge.fromBookId === centerId && edge.toBookId === node.id) ||
-          (edge.toBookId === centerId && edge.fromBookId === node.id)
-        );
-        const r = isCenter ? 6 : direct ? 4.5 : 3.5;
-        const fill = isCenter ? "#c99068" : direct ? "#d8aa86" : "#ead0bd";
-        const stroke = isCenter ? "#b97d58" : direct ? "#c99068" : "#ead0bd";
+        const highlighted = isNodeHighlighted(node.id);
+        const r = isCenter ? 6 : highlighted ? 4.5 : 3.5;
+        const fill = isCenter ? "#c99068" : highlighted ? "#d8aa86" : "#ead0bd";
+        const stroke = isCenter ? "#b97d58" : highlighted ? "#c99068" : "#ead0bd";
         const layoutNode = layoutById.get(node.id);
         const labelLines = layoutNode.labelLines;
         const labelWidth = layoutNode.labelWidth;
@@ -3075,7 +3106,7 @@
           `<tspan x="0" dy="${index === 0 ? 0 : 17}">${escapeHtml(line)}</tspan>`
         ).join("");
         return `
-          <g class="node ${isCenter || direct ? "" : "dim"}" data-center-book="${escapeHtml(node.id)}" transform="translate(${pos.x}, ${pos.y})">
+          <g class="node ${highlighted ? "" : "dim"}" data-center-book="${escapeHtml(node.id)}" transform="translate(${pos.x}, ${pos.y})">
             <circle r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="1.5"></circle>
             <rect class="node-label-bg" x="${labelX}" y="${labelY}" width="${labelWidth}" height="${labelHeight}"></rect>
             <text class="node-label" x="0" y="${textStartY}" text-anchor="middle" fill="#20242d">${tspans}</text>
@@ -3100,6 +3131,29 @@
       });
       relaxGraphPositions(graph, centerId, positions, layoutById, width, height);
       return positions;
+    }
+
+    function getGraphHopDistances(graph, centerId) {
+      const distances = new Map([[centerId, 0]]);
+      const neighbors = new Map();
+      graph.nodes.forEach((node) => neighbors.set(node.id, []));
+      graph.edges.forEach((edge) => {
+        if (!neighbors.has(edge.fromBookId) || !neighbors.has(edge.toBookId)) return;
+        neighbors.get(edge.fromBookId).push(edge.toBookId);
+        neighbors.get(edge.toBookId).push(edge.fromBookId);
+      });
+
+      const queue = [centerId];
+      while (queue.length) {
+        const current = queue.shift();
+        const nextDistance = distances.get(current) + 1;
+        (neighbors.get(current) || []).forEach((next) => {
+          if (distances.has(next)) return;
+          distances.set(next, nextDistance);
+          queue.push(next);
+        });
+      }
+      return distances;
     }
 
     function requestD3ForceLayout(graph, centerId, layoutNodes, width, height) {
@@ -3707,6 +3761,11 @@
       resetGraphViewport(buildGraph(ensureGraphCenter()));
     });
 
+    $("#graphHopDepthSelect").addEventListener("change", (event) => {
+      state.graphHighlightHops = event.currentTarget.value;
+      renderGraph();
+    });
+
     $all("input[name='graphMyPathHighlight']").forEach((input) => {
       input.addEventListener("click", (event) => {
         if (state.highlightMyPaths === (event.currentTarget.value === "on")) return;
@@ -3858,6 +3917,7 @@
     history.replaceState({
       page: "home",
       selectedBookId: state.selectedBookId,
+      graphHighlightHops: state.graphHighlightHops,
       highlightMyPaths: state.highlightMyPaths
     }, "", location.href);
 
