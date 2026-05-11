@@ -705,7 +705,12 @@
     }
 
     .node {
-      cursor: pointer;
+      cursor: grab;
+      touch-action: none;
+    }
+
+    .node.is-dragging {
+      cursor: grabbing;
     }
 
     .node circle {
@@ -1144,6 +1149,10 @@
       graphDrag: null,
       graphLayoutWorker: null,
       graphLayoutToken: 0,
+      graphRenderedPositions: null,
+      graphRenderedLayoutById: null,
+      graphRenderedSize: null,
+      suppressGraphClick: false,
       highlightMyPaths: true,
       activeReplyCommentId: null,
       authDebugLog: []
@@ -3007,6 +3016,11 @@
       for (let step = 0; step < 6; step += 1) {
         resolveLabelCollisions(layoutNodes, centerId, positions, layoutById, width, height);
       }
+      if (isInteractive) {
+        state.graphRenderedPositions = positions;
+        state.graphRenderedLayoutById = layoutById;
+        state.graphRenderedSize = { width, height };
+      }
 
       const maxCount = Math.max(1, ...graph.edges.map((edge) => edge.count));
       const minCount = Math.min(...graph.edges.map((edge) => edge.count), maxCount);
@@ -3035,7 +3049,7 @@
         const opacity = highlightMine && isMyPath ? 1 : 0.78;
         return `
           <g class="${linkedToCenter ? "" : "dim"}">
-            <line x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}" stroke="${lineColor}" stroke-width="${width}" stroke-linecap="round" stroke-opacity="${opacity}" marker-end="url(#${marker})"></line>
+            <line data-edge-from="${escapeHtml(edge.fromBookId)}" data-edge-to="${escapeHtml(edge.toBookId)}" x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}" stroke="${lineColor}" stroke-width="${width}" stroke-linecap="round" stroke-opacity="${opacity}" marker-end="url(#${marker})"></line>
           </g>
         `;
       }).join("");
@@ -3061,7 +3075,7 @@
           `<tspan x="0" dy="${index === 0 ? 0 : 17}">${escapeHtml(line)}</tspan>`
         ).join("");
         return `
-          <g class="node ${isCenter || direct ? "" : "dim"}" data-center-book="${node.id}" transform="translate(${pos.x}, ${pos.y})">
+          <g class="node ${isCenter || direct ? "" : "dim"}" data-center-book="${escapeHtml(node.id)}" transform="translate(${pos.x}, ${pos.y})">
             <circle r="${r}" fill="${fill}" stroke="${stroke}" stroke-width="1.5"></circle>
             <rect class="node-label-bg" x="${labelX}" y="${labelY}" width="${labelWidth}" height="${labelHeight}"></rect>
             <text class="node-label" x="0" y="${textStartY}" text-anchor="middle" fill="#20242d">${tspans}</text>
@@ -3496,6 +3510,10 @@
 
       const centerBook = event.target.closest("[data-center-book]");
       if (centerBook) {
+        if (state.suppressGraphClick) {
+          event.preventDefault();
+          return;
+        }
         state.selectedBookId = centerBook.dataset.centerBook;
         if ($("#graphPage").classList.contains("active")) {
           renderGraph();
@@ -3585,6 +3603,10 @@
       if (event.target.closest("button, textarea, input, form")) return;
       const graphBook = event.target.closest("[data-center-book]");
       if (graphBook) {
+        if (state.suppressGraphClick) {
+          event.preventDefault();
+          return;
+        }
         state.selectedBookId = graphBook.dataset.centerBook;
         setPage("book");
         return;
@@ -3714,11 +3736,16 @@
     }, { passive: false });
 
     $("#graphSvg").addEventListener("pointerdown", (event) => {
-      if (event.target.closest("[data-center-book]")) return;
+      const node = event.target.closest("[data-center-book]");
+      if (node) {
+        startGraphNodeDrag(event, node);
+        return;
+      }
       const svg = event.currentTarget;
       svg.setPointerCapture(event.pointerId);
       svg.classList.add("is-panning");
       state.graphDrag = {
+        type: "pan",
         pointerId: event.pointerId,
         clientX: event.clientX,
         clientY: event.clientY,
@@ -3729,6 +3756,22 @@
     $("#graphSvg").addEventListener("pointermove", (event) => {
       const drag = state.graphDrag;
       if (!drag || drag.pointerId !== event.pointerId) return;
+      if (drag.type === "node") {
+        const svg = event.currentTarget;
+        const point = svgPoint(svg, event.clientX, event.clientY);
+        const pos = state.graphRenderedPositions?.get(drag.nodeId);
+        const layoutNode = state.graphRenderedLayoutById?.get(drag.nodeId);
+        const size = state.graphRenderedSize || { width: 1000, height: 620 };
+        if (!pos || !layoutNode) return;
+        pos.x = drag.startPos.x + (point.x - drag.startPoint.x);
+        pos.y = drag.startPos.y + (point.y - drag.startPoint.y);
+        clampGraphPosition(pos, layoutNode, size.width, size.height);
+        updateGraphNodePosition(svg, drag.nodeId, pos);
+        if (Math.abs(point.x - drag.startPoint.x) > 2 || Math.abs(point.y - drag.startPoint.y) > 2) {
+          drag.moved = true;
+        }
+        return;
+      }
       const svg = event.currentTarget;
       const rect = svg.getBoundingClientRect();
       const dx = (event.clientX - drag.clientX) * (drag.start.width / rect.width);
@@ -3744,11 +3787,57 @@
     $("#graphSvg").addEventListener("pointerup", (event) => endGraphPan(event));
     $("#graphSvg").addEventListener("pointercancel", (event) => endGraphPan(event));
 
+    function startGraphNodeDrag(event, node) {
+      const svg = event.currentTarget;
+      const nodeId = node.dataset.centerBook;
+      const pos = state.graphRenderedPositions?.get(nodeId);
+      if (!pos) return;
+      svg.setPointerCapture(event.pointerId);
+      node.classList.add("is-dragging");
+      state.graphDrag = {
+        type: "node",
+        pointerId: event.pointerId,
+        nodeId,
+        node,
+        startPoint: svgPoint(svg, event.clientX, event.clientY),
+        startPos: { x: pos.x, y: pos.y },
+        moved: false
+      };
+    }
+
     function endGraphPan(event) {
       const drag = state.graphDrag;
       if (!drag || drag.pointerId !== event.pointerId) return;
-      event.currentTarget.classList.remove("is-panning");
+      if (drag.type === "node") {
+        drag.node?.classList.remove("is-dragging");
+        if (drag.moved) {
+          state.suppressGraphClick = true;
+          window.setTimeout(() => {
+            state.suppressGraphClick = false;
+          }, 250);
+        }
+      } else {
+        event.currentTarget.classList.remove("is-panning");
+      }
       state.graphDrag = null;
+    }
+
+    function updateGraphNodePosition(svg, nodeId, pos) {
+      const selectorValue = escapeSelectorValue(nodeId);
+      const node = svg.querySelector(`[data-center-book="${selectorValue}"]`);
+      if (node) node.setAttribute("transform", `translate(${pos.x}, ${pos.y})`);
+      svg.querySelectorAll(`[data-edge-from="${selectorValue}"]`).forEach((line) => {
+        line.setAttribute("x1", pos.x);
+        line.setAttribute("y1", pos.y);
+      });
+      svg.querySelectorAll(`[data-edge-to="${selectorValue}"]`).forEach((line) => {
+        line.setAttribute("x2", pos.x);
+        line.setAttribute("y2", pos.y);
+      });
+    }
+
+    function escapeSelectorValue(value) {
+      return String(value).replace(/\\/g, "\\\\").replace(/"/g, '\\"');
     }
 
     function svgPoint(svg, clientX, clientY) {
