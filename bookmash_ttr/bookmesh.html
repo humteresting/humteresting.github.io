@@ -3922,6 +3922,18 @@
       applyGraphViewport();
     }, { passive: false });
 
+    $("#graphSvg").addEventListener("contextmenu", (event) => {
+      event.preventDefault();
+      const node = event.target.closest("[data-center-book]");
+      if (node) {
+        openGraphNodeMenu(node.dataset.centerBook, event.clientX, event.clientY);
+      }
+    });
+
+    $("#graphNodeMenu").addEventListener("contextmenu", (event) => {
+      event.preventDefault();
+    });
+
     $("#graphSvg").addEventListener("pointerdown", (event) => {
       const svg = event.currentTarget;
       if (event.pointerType === "touch" && state.graphTouchPinch) return;
