@@ -695,6 +695,7 @@
       height: min(68vh, 680px);
       min-height: 480px;
       overflow: hidden;
+      touch-action: none;
       background: #fff;
       border: 1px solid var(--line);
       border-radius: 8px;
@@ -1207,6 +1208,7 @@
       graphViewport: { x: 0, y: 0, width: 1000, height: 620 },
       graphDrag: null,
       graphPointers: new Map(),
+      graphTouchPinch: null,
       graphLayoutWorker: null,
       graphLayoutToken: 0,
       graphRenderedPositions: null,
@@ -4006,6 +4008,49 @@
     $("#graphSvg").addEventListener("pointerup", (event) => endGraphPan(event));
     $("#graphSvg").addEventListener("pointercancel", (event) => endGraphPan(event));
 
+    $("#graphSvg").addEventListener("touchstart", (event) => {
+      if (event.touches.length < 2) return;
+      event.preventDefault();
+      startGraphTouchPinch(event.currentTarget, event.touches);
+    }, { passive: false });
+
+    $("#graphSvg").addEventListener("touchmove", (event) => {
+      if (!state.graphTouchPinch || event.touches.length < 2) return;
+      event.preventDefault();
+      updateGraphTouchPinch(event.currentTarget, event.touches);
+    }, { passive: false });
+
+    $("#graphSvg").addEventListener("touchend", (event) => {
+      if (event.touches.length < 2) state.graphTouchPinch = null;
+    }, { passive: false });
+
+    $("#graphSvg").addEventListener("touchcancel", () => {
+      state.graphTouchPinch = null;
+    }, { passive: false });
+
+    function startGraphTouchPinch(svg, touches) {
+      const points = graphTouchPoints(touches);
+      const distance = graphClientDistance(points);
+      if (!distance) return;
+      const midpoint = graphClientMidpoint(points);
+      closeGraphNodeMenu();
+      if (state.graphDrag?.type === "node") {
+        state.graphDrag.node?.classList.remove("is-dragging");
+      }
+      svg.classList.remove("is-panning");
+      state.graphDrag = null;
+      state.graphTouchPinch = {
+        startDistance: distance,
+        start: { ...state.graphViewport },
+        focus: svgPoint(svg, midpoint.clientX, midpoint.clientY)
+      };
+    }
+
+    function updateGraphTouchPinch(svg, touches) {
+      if (!state.graphTouchPinch) return;
+      updateGraphViewportFromPinch(svg, state.graphTouchPinch, graphTouchPoints(touches));
+    }
+
     function startGraphPinch(svg) {
       const points = [...state.graphPointers.values()].slice(0, 2);
       if (points.length < 2) return;
@@ -4027,7 +4072,10 @@
 
     function updateGraphPinch(svg, drag) {
       if (state.graphPointers.size < 2) return;
-      const points = [...state.graphPointers.values()].slice(0, 2);
+      updateGraphViewportFromPinch(svg, drag, [...state.graphPointers.values()].slice(0, 2));
+    }
+
+    function updateGraphViewportFromPinch(svg, drag, points) {
       const distance = graphClientDistance(points);
       if (!distance) return;
       const midpoint = graphClientMidpoint(points);
@@ -4044,6 +4092,13 @@
         height: nextHeight
       };
       applyGraphViewport();
+    }
+
+    function graphTouchPoints(touches) {
+      return [
+        { clientX: touches[0].clientX, clientY: touches[0].clientY },
+        { clientX: touches[1].clientX, clientY: touches[1].clientY }
+      ];
     }
 
     function graphClientDistance(points) {
