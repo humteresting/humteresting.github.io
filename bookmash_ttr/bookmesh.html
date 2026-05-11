@@ -4035,7 +4035,6 @@
       const points = graphTouchPoints(touches);
       const distance = graphClientDistance(points);
       if (!distance) return;
-      const midpoint = graphClientMidpoint(points);
       closeGraphNodeMenu();
       if (state.graphDrag?.type === "node") {
         state.graphDrag.node?.classList.remove("is-dragging");
@@ -4043,9 +4042,7 @@
       svg.classList.remove("is-panning");
       state.graphDrag = null;
       state.graphTouchPinch = {
-        startDistance: distance,
-        start: { ...state.graphViewport },
-        focus: graphPointFromScreenRatio(svg, midpoint.clientX, midpoint.clientY, state.graphViewport)
+        lastDistance: distance
       };
     }
 
@@ -4057,7 +4054,6 @@
     function startGraphPinch(svg) {
       const points = [...state.graphPointers.values()].slice(0, 2);
       if (points.length < 2) return;
-      const midpoint = graphClientMidpoint(points);
       const distance = graphClientDistance(points);
       if (!distance) return;
       closeGraphNodeMenu();
@@ -4067,9 +4063,7 @@
       svg.classList.remove("is-panning");
       state.graphDrag = {
         type: "pinch",
-        startDistance: distance,
-        start: { ...state.graphViewport },
-        focus: graphPointFromScreenRatio(svg, midpoint.clientX, midpoint.clientY, state.graphViewport)
+        lastDistance: distance
       };
     }
 
@@ -4082,16 +4076,22 @@
       const distance = graphClientDistance(points);
       if (!distance) return;
       const midpoint = graphClientMidpoint(points);
-      const zoom = drag.startDistance / distance;
-      const nextWidth = clamp(drag.start.width * zoom, 260, 2200);
-      const nextHeight = nextWidth * (drag.start.height / drag.start.width);
+      const view = state.graphViewport;
       const screenRatio = graphScreenRatio(svg, midpoint.clientX, midpoint.clientY);
+      const focus = {
+        x: view.x + view.width * screenRatio.x,
+        y: view.y + view.height * screenRatio.y
+      };
+      const zoom = drag.lastDistance / distance;
+      const nextWidth = clamp(view.width * zoom, 260, 2200);
+      const nextHeight = nextWidth * (view.height / view.width);
       state.graphViewport = {
-        x: drag.focus.x - nextWidth * screenRatio.x,
-        y: drag.focus.y - nextHeight * screenRatio.y,
+        x: focus.x - nextWidth * screenRatio.x,
+        y: focus.y - nextHeight * screenRatio.y,
         width: nextWidth,
         height: nextHeight
       };
+      drag.lastDistance = distance;
       applyGraphViewport();
     }
 
