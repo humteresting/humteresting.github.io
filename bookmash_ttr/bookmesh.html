@@ -1292,13 +1292,25 @@
       return `bookmesh.user.${userId}`;
     }
 
+    function mergeCachedItems(primaryItems = [], secondaryItems = []) {
+      const items = new Map();
+      [...primaryItems, ...secondaryItems].forEach((item) => {
+        if (item?.id) items.set(item.id, { ...items.get(item.id), ...item });
+      });
+      return Array.from(items.values());
+    }
+
     function resetStateForUser(userId = "") {
-      const prefix = userId ? userCachePrefix(userId) : "bookmesh";
-      state.books = load(`${prefix}.books`, []);
-      state.edges = load(`${prefix}.edges`, []);
-      state.ratings = load(`${prefix}.ratings`, []);
-      state.comments = load(`${prefix}.comments`, []);
-      state.userBookIds = new Set(load(`${prefix}.userBookIds`, []));
+      const userPrefix = userId ? userCachePrefix(userId) : "bookmesh";
+      const globalBooks = load("bookmesh.books", []);
+      const globalEdges = load("bookmesh.edges", []);
+      const globalRatings = load("bookmesh.ratings", []);
+      const globalComments = load("bookmesh.comments", []);
+      state.books = userId ? mergeCachedItems(globalBooks, load(`${userPrefix}.books`, [])) : globalBooks;
+      state.edges = userId ? mergeCachedItems(globalEdges, load(`${userPrefix}.edges`, [])) : globalEdges;
+      state.ratings = userId ? mergeCachedItems(globalRatings, load(`${userPrefix}.ratings`, [])) : globalRatings;
+      state.comments = userId ? mergeCachedItems(globalComments, load(`${userPrefix}.comments`, [])) : globalComments;
+      state.userBookIds = new Set(load(`${userPrefix}.userBookIds`, []));
       state.candidateBooks = {};
       state.selectedBookId = null;
       state.graphCenterId = null;
@@ -1362,6 +1374,7 @@
         currentUser.photoURL = user?.photoURL || null;
         $("#authButton").textContent = user ? "로그아웃" : "Google 로그인";
 
+        await loadFirestoreSnapshot();
         if (user) {
           await hydrateUserProfile(user);
           await loadUserFirestoreData(user.uid);
@@ -1374,7 +1387,6 @@
         if ($("#bookPage").classList.contains("active")) renderBookDetail();
       });
 
-      await loadFirestoreSnapshot();
     }
 
     async function hydrateUserProfile(user) {
@@ -1438,10 +1450,10 @@
       if (!firebaseReady) return;
       try {
         const [bookSnap, edgeSnap, ratingSnap, commentSnap] = await Promise.all([
-          getDocs(query(collection(firebase.db, "books"), limit(80))),
-          getDocs(query(collection(firebase.db, "readingEdges"), limit(300))),
-          getDocs(query(collection(firebase.db, "bookRatings"), limit(500))),
-          getDocs(query(collection(firebase.db, "bookComments"), limit(800)))
+          getDocs(collection(firebase.db, "books")),
+          getDocs(collection(firebase.db, "readingEdges")),
+          getDocs(collection(firebase.db, "bookRatings")),
+          getDocs(collection(firebase.db, "bookComments"))
         ]);
 
         const remoteBooks = bookSnap.docs.map((item) => ({ id: item.id, ...item.data() }));
