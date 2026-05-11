@@ -1171,6 +1171,7 @@
       graphRenderedPositions: null,
       graphRenderedLayoutById: null,
       graphRenderedSize: null,
+      graphRenderedNeighbors: null,
       suppressGraphClick: false,
       graphHighlightHops: "1",
       highlightMyPaths: true,
@@ -3044,6 +3045,7 @@
         state.graphRenderedPositions = positions;
         state.graphRenderedLayoutById = layoutById;
         state.graphRenderedSize = { width, height };
+        state.graphRenderedNeighbors = getGraphNeighborMap(graph);
       }
 
       const maxCount = Math.max(1, ...graph.edges.map((edge) => edge.count));
@@ -3134,15 +3136,8 @@
     }
 
     function getGraphHopDistances(graph, centerId) {
+      const neighbors = getGraphNeighborMap(graph);
       const distances = new Map([[centerId, 0]]);
-      const neighbors = new Map();
-      graph.nodes.forEach((node) => neighbors.set(node.id, []));
-      graph.edges.forEach((edge) => {
-        if (!neighbors.has(edge.fromBookId) || !neighbors.has(edge.toBookId)) return;
-        neighbors.get(edge.fromBookId).push(edge.toBookId);
-        neighbors.get(edge.toBookId).push(edge.fromBookId);
-      });
-
       const queue = [centerId];
       while (queue.length) {
         const current = queue.shift();
@@ -3154,6 +3149,17 @@
         });
       }
       return distances;
+    }
+
+    function getGraphNeighborMap(graph) {
+      const neighbors = new Map();
+      graph.nodes.forEach((node) => neighbors.set(node.id, []));
+      graph.edges.forEach((edge) => {
+        if (!neighbors.has(edge.fromBookId) || !neighbors.has(edge.toBookId)) return;
+        neighbors.get(edge.fromBookId).push(edge.toBookId);
+        neighbors.get(edge.toBookId).push(edge.fromBookId);
+      });
+      return neighbors;
     }
 
     function requestD3ForceLayout(graph, centerId, layoutNodes, width, height) {
@@ -3822,11 +3828,24 @@
         const layoutNode = state.graphRenderedLayoutById?.get(drag.nodeId);
         const size = state.graphRenderedSize || { width: 1000, height: 620 };
         if (!pos || !layoutNode) return;
-        pos.x = drag.startPos.x + (point.x - drag.startPoint.x);
-        pos.y = drag.startPos.y + (point.y - drag.startPoint.y);
+        const requestedDx = point.x - drag.startPoint.x;
+        const requestedDy = point.y - drag.startPoint.y;
+        pos.x = drag.startPos.x + requestedDx;
+        pos.y = drag.startPos.y + requestedDy;
         clampGraphPosition(pos, layoutNode, size.width, size.height);
+        const actualDx = pos.x - drag.startPos.x;
+        const actualDy = pos.y - drag.startPos.y;
         updateGraphNodePosition(svg, drag.nodeId, pos);
-        if (Math.abs(point.x - drag.startPoint.x) > 2 || Math.abs(point.y - drag.startPoint.y) > 2) {
+        drag.followers.forEach((follower) => {
+          const followerPos = state.graphRenderedPositions?.get(follower.id);
+          const followerLayout = state.graphRenderedLayoutById?.get(follower.id);
+          if (!followerPos || !followerLayout) return;
+          followerPos.x = follower.start.x + actualDx * follower.influence;
+          followerPos.y = follower.start.y + actualDy * follower.influence;
+          clampGraphPosition(followerPos, followerLayout, size.width, size.height);
+          updateGraphNodePosition(svg, follower.id, followerPos);
+        });
+        if (Math.abs(requestedDx) > 2 || Math.abs(requestedDy) > 2) {
           drag.moved = true;
         }
         return;
@@ -3860,8 +3879,45 @@
         node,
         startPoint: svgPoint(svg, event.clientX, event.clientY),
         startPos: { x: pos.x, y: pos.y },
+        followers: getGraphDragFollowers(nodeId),
         moved: false
       };
+    }
+
+    function getGraphDragFollowers(nodeId) {
+      const positions = state.graphRenderedPositions;
+      const neighbors = state.graphRenderedNeighbors;
+      if (!positions || !neighbors) return [];
+      const influenceByHop = new Map([
+        [1, 0.46],
+        [2, 0.22],
+        [3, 0.1]
+      ]);
+      const visited = new Map([[nodeId, 0]]);
+      const queue = [nodeId];
+
+      while (queue.length) {
+        const current = queue.shift();
+        const hop = visited.get(current);
+        if (hop >= 3) continue;
+        (neighbors.get(current) || []).forEach((next) => {
+          if (visited.has(next)) return;
+          visited.set(next, hop + 1);
+          queue.push(next);
+        });
+      }
+
+      return [...visited.entries()]
+        .filter(([id, hop]) => id !== nodeId && influenceByHop.has(hop) && positions.has(id))
+        .map(([id, hop]) => {
+          const start = positions.get(id);
+          return {
+            id,
+            hop,
+            influence: influenceByHop.get(hop),
+            start: { x: start.x, y: start.y }
+          };
+        });
     }
 
     function endGraphPan(event) {
