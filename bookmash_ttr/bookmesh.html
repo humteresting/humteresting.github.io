@@ -3574,12 +3574,7 @@
           event.preventDefault();
           return;
         }
-        state.selectedBookId = centerBook.dataset.centerBook;
-        if ($("#graphPage").classList.contains("active")) {
-          renderGraph();
-        } else {
-          setPage("graph");
-        }
+        selectGraphFocus(centerBook.dataset.centerBook);
         return;
       }
 
@@ -3930,11 +3925,23 @@
           window.setTimeout(() => {
             state.suppressGraphClick = false;
           }, 250);
+        } else {
+          selectGraphFocus(drag.nodeId);
         }
       } else {
         event.currentTarget.classList.remove("is-panning");
       }
       state.graphDrag = null;
+    }
+
+    function selectGraphFocus(bookId) {
+      if (!bookId) return;
+      state.selectedBookId = bookId;
+      if ($("#graphPage").classList.contains("active")) {
+        renderGraph();
+      } else {
+        setPage("graph");
+      }
     }
 
     function updateGraphNodePosition(svg, nodeId, pos) {
