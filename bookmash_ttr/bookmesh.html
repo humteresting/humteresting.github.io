@@ -1206,6 +1206,7 @@
       graphNodeCount: 0,
       graphViewport: { x: 0, y: 0, width: 1000, height: 620 },
       graphDrag: null,
+      graphPointers: new Map(),
       graphLayoutWorker: null,
       graphLayoutToken: 0,
       graphRenderedPositions: null,
@@ -3920,14 +3921,23 @@
     }, { passive: false });
 
     $("#graphSvg").addEventListener("pointerdown", (event) => {
+      const svg = event.currentTarget;
+      svg.setPointerCapture(event.pointerId);
+      state.graphPointers.set(event.pointerId, {
+        clientX: event.clientX,
+        clientY: event.clientY
+      });
+      if (state.graphPointers.size >= 2) {
+        startGraphPinch(svg);
+        return;
+      }
+
       const node = event.target.closest("[data-center-book]");
       if (node) {
         startGraphNodeDrag(event, node);
         return;
       }
       closeGraphNodeMenu();
-      const svg = event.currentTarget;
-      svg.setPointerCapture(event.pointerId);
       svg.classList.add("is-panning");
       state.graphDrag = {
         type: "pan",
@@ -3939,8 +3949,19 @@
     });
 
     $("#graphSvg").addEventListener("pointermove", (event) => {
+      if (state.graphPointers.has(event.pointerId)) {
+        state.graphPointers.set(event.pointerId, {
+          clientX: event.clientX,
+          clientY: event.clientY
+        });
+      }
       const drag = state.graphDrag;
-      if (!drag || drag.pointerId !== event.pointerId) return;
+      if (!drag) return;
+      if (drag.type === "pinch") {
+        updateGraphPinch(event.currentTarget, drag);
+        return;
+      }
+      if (drag.pointerId !== event.pointerId) return;
       if (drag.type === "node") {
         const svg = event.currentTarget;
         const point = svgPoint(svg, event.clientX, event.clientY);
@@ -3984,6 +4005,59 @@
 
     $("#graphSvg").addEventListener("pointerup", (event) => endGraphPan(event));
     $("#graphSvg").addEventListener("pointercancel", (event) => endGraphPan(event));
+
+    function startGraphPinch(svg) {
+      const points = [...state.graphPointers.values()].slice(0, 2);
+      if (points.length < 2) return;
+      const midpoint = graphClientMidpoint(points);
+      const distance = graphClientDistance(points);
+      if (!distance) return;
+      closeGraphNodeMenu();
+      if (state.graphDrag?.type === "node") {
+        state.graphDrag.node?.classList.remove("is-dragging");
+      }
+      svg.classList.remove("is-panning");
+      state.graphDrag = {
+        type: "pinch",
+        startDistance: distance,
+        start: { ...state.graphViewport },
+        focus: svgPoint(svg, midpoint.clientX, midpoint.clientY)
+      };
+    }
+
+    function updateGraphPinch(svg, drag) {
+      if (state.graphPointers.size < 2) return;
+      const points = [...state.graphPointers.values()].slice(0, 2);
+      const distance = graphClientDistance(points);
+      if (!distance) return;
+      const midpoint = graphClientMidpoint(points);
+      const currentFocus = svgPoint(svg, midpoint.clientX, midpoint.clientY);
+      const zoom = drag.startDistance / distance;
+      const nextWidth = clamp(drag.start.width * zoom, 260, 2200);
+      const nextHeight = nextWidth * (drag.start.height / drag.start.width);
+      const ratioX = (drag.focus.x - drag.start.x) / drag.start.width;
+      const ratioY = (drag.focus.y - drag.start.y) / drag.start.height;
+      state.graphViewport = {
+        x: currentFocus.x - nextWidth * ratioX,
+        y: currentFocus.y - nextHeight * ratioY,
+        width: nextWidth,
+        height: nextHeight
+      };
+      applyGraphViewport();
+    }
+
+    function graphClientDistance(points) {
+      const dx = points[0].clientX - points[1].clientX;
+      const dy = points[0].clientY - points[1].clientY;
+      return Math.sqrt(dx * dx + dy * dy);
+    }
+
+    function graphClientMidpoint(points) {
+      return {
+        clientX: (points[0].clientX + points[1].clientX) / 2,
+        clientY: (points[0].clientY + points[1].clientY) / 2
+      };
+    }
 
     function startGraphNodeDrag(event, node) {
       const svg = event.currentTarget;
@@ -4042,6 +4116,15 @@
 
     function endGraphPan(event) {
       const drag = state.graphDrag;
+      state.graphPointers.delete(event.pointerId);
+      if (drag?.type === "pinch") {
+        if (state.graphPointers.size >= 2) {
+          startGraphPinch(event.currentTarget);
+          return;
+        }
+        state.graphDrag = null;
+        return;
+      }
       if (!drag || drag.pointerId !== event.pointerId) return;
       if (drag.type === "node") {
         drag.node?.classList.remove("is-dragging");
