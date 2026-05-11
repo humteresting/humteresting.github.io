@@ -1064,6 +1064,7 @@
         </div>
         <div id="graphNodeMenu" class="graph-node-menu" role="menu" aria-hidden="true">
           <button type="button" data-graph-menu-action="focus">그래프 중심으로 보기</button>
+          <button type="button" data-graph-menu-action="saveRead">이 책을 내 읽은 책으로 추가</button>
           <button type="button" data-graph-menu-action="addNext">이후에 읽은 책 추가</button>
           <button type="button" data-graph-menu-action="addPrevious">이전에 읽은 책 추가</button>
           <button type="button" data-graph-menu-action="book">책 정보로 가기</button>
@@ -1569,6 +1570,30 @@
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       }, { merge: true });
+      return true;
+    }
+
+    async function saveReadBook(bookId) {
+      if (!currentUser.signedIn) {
+        showToast("로그인한 사용자만 내 읽은 책에 추가할 수 있습니다.");
+        return false;
+      }
+      const book = getBook(bookId);
+      if (!book) {
+        showToast("책 정보를 찾을 수 없습니다.");
+        return false;
+      }
+      const alreadySaved = state.userBookIds.has(book.id);
+      try {
+        await saveUserBookToFirestore(book);
+      } catch (error) {
+        showError("내 읽은 책 저장에 실패했습니다.", error, "userBooks/write");
+        return false;
+      }
+      renderMe();
+      renderGraph();
+      if ($("#bookPage").classList.contains("active")) renderBookDetail();
+      showToast(alreadySaved ? "이미 내 읽은 책에 있습니다." : "내 읽은 책에 추가했습니다.");
       return true;
     }
 
@@ -2603,6 +2628,7 @@
             <p class="meta">ISBN ${escapeHtml(book.isbn13 || book.isbn10 || "없음")}</p>
             ${renderRatingPanel(book.id)}
             <div class="actions">
+              <button class="primary" data-save-read-book="${book.id}">${state.userBookIds.has(book.id) ? "내 읽은 책" : "이 책을 내 읽은 책으로 추가"}</button>
               <button class="primary" data-add-next="${book.id}">이 책 다음에 읽은 책 추가</button>
               <button class="secondary" data-add-previous="${book.id}">이 책 전에 읽은 책 추가</button>
               <button class="secondary" data-open-graph="${book.id}">그래프 보기</button>
@@ -3616,6 +3642,10 @@
           selectGraphFocus(bookId);
           return;
         }
+        if (action === "saveRead") {
+          await saveReadBook(bookId);
+          return;
+        }
         if (action === "addNext") {
           openModal(bookId, "next");
           return;
@@ -3665,6 +3695,12 @@
       const searchQuery = event.target.closest("[data-search-query]");
       if (searchQuery) {
         searchFromKeyword(searchQuery.dataset.searchQuery);
+        return;
+      }
+
+      const saveReadButton = event.target.closest("[data-save-read-book]");
+      if (saveReadButton) {
+        await saveReadBook(saveReadButton.dataset.saveReadBook);
         return;
       }
 
