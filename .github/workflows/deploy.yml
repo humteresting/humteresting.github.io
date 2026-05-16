@@ -51,13 +51,14 @@ jobs:
           set -euo pipefail
 
           rm -rf _site
-          mkdir -p _site/values _site/ipaenglish _site/bookmash_ttr
+          mkdir -p _site/values _site/ipaenglish _site/bookmash_ttr _site/privacy
 
           cp ads.txt _site/ads.txt
           cp index.html _site/index.html
           cp robots.txt _site/robots.txt
           cp sitemap.xml _site/sitemap.xml
           cp google*.html _site/
+          cp privacy/trip_money_privacy.html _site/privacy/trip_money_privacy.html
           touch _site/.nojekyll
 
           cp web_value_worldcup/values.html _site/values/index.html
