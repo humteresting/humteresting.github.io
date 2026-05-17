@@ -1,6 +1,6 @@
 import { writeFile } from "node:fs/promises";
 
-const endpoint = "https://api.data.go.kr/openapi/tn_pubr_public_lbrry_api";
+const endpoint = "http://api.data.go.kr/openapi/tn_pubr_public_lbrry_api";
 const outputPath = new URL("../libraries.json", import.meta.url);
 const serviceKey = process.env.PUBLIC_LIBRARY_API_KEY;
 
@@ -11,9 +11,9 @@ if (!serviceKey) {
 
 const serviceKeyCandidates = [...new Set([serviceKey, decodeURIComponent(serviceKey)])];
 const items = [];
-const pageSize = 1000;
-const maxPages = 30;
-const maxRetries = 4;
+const pageSize = 100;
+const maxPages = 300;
+const maxRetries = 6;
 
 for (const candidate of serviceKeyCandidates) {
   items.length = 0;
@@ -69,7 +69,8 @@ async function fetchLibraryPage(key, pageNo, pageSize) {
     } catch (error) {
       lastError = error;
       if (attempt < maxRetries) {
-        await sleep(700 * attempt);
+        console.warn(`Page ${pageNo} attempt ${attempt} failed: ${error.message}`);
+        await sleep(1000 * attempt);
       }
     }
   }
