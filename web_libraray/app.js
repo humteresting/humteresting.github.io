@@ -1,6 +1,6 @@
 const CONFIG = {
   workerBaseUrl: "https://YOUR_WORKER_SUBDOMAIN.workers.dev",
-  libraryCatalogUrl: "./libraries.json",
+  libraryCatalogUrl: "./libraries.json?v=20260517-2",
   libraryCacheTtlMs: 1000 * 60 * 60 * 24 * 7
 };
 
@@ -195,7 +195,7 @@ async function refreshLibraryCatalog() {
 }
 
 async function fetchLibraryCatalog() {
-  const response = await fetch(CONFIG.libraryCatalogUrl, { cache: "force-cache" });
+  const response = await fetch(CONFIG.libraryCatalogUrl, { cache: "no-cache" });
   const data = await response.json().catch(() => ({}));
 
   if (!response.ok) {
