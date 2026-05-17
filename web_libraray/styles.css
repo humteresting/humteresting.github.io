@@ -166,6 +166,27 @@ button:disabled {
   text-align: right;
 }
 
+.location-presets {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.location-presets button {
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  padding: 7px 10px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 0.82rem;
+}
+
+.location-presets button:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
 .status {
   min-height: 22px;
   margin: 16px 0 0;
@@ -321,6 +342,10 @@ button:disabled {
 
   .location-control p {
     text-align: left;
+  }
+
+  .location-presets {
+    justify-content: flex-start;
   }
 
   h1 {

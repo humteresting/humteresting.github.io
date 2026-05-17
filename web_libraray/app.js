@@ -28,6 +28,7 @@ const elements = {
   selectedBookText: document.querySelector("#selectedBookText"),
   locationButton: document.querySelector("#locationButton"),
   locationSummary: document.querySelector("#locationSummary"),
+  locationPresets: document.querySelectorAll(".location-presets button"),
   bookTemplate: document.querySelector("#bookTemplate"),
   libraryTemplate: document.querySelector("#libraryTemplate")
 };
@@ -49,6 +50,15 @@ elements.locationButton.addEventListener("click", async () => {
   } else {
     await loadNearestLibraries();
   }
+});
+
+elements.locationPresets.forEach((button) => {
+  button.addEventListener("click", async () => {
+    const lat = Number(button.dataset.lat);
+    const lng = Number(button.dataset.lng);
+    const name = button.textContent.trim();
+    await setManualPosition({ latitude: lat, longitude: lng }, name);
+  });
 });
 
 async function searchBooks(query) {
@@ -259,7 +269,10 @@ async function ensurePosition(force = false) {
     elements.locationButton.textContent = "위치 갱신";
     elements.locationSummary.textContent = formatPositionSummary(position);
     if (!isLikelyKoreaPosition(state.position)) {
-      setStatus("인지한 위치가 한국 범위를 벗어나 가까운 도서관 계산이 부정확할 수 있습니다.", true);
+      const message = "자동 위치가 한국 밖으로 인식되었습니다. 아래 지역 버튼으로 기준 위치를 선택해 주세요.";
+      elements.locationSummary.textContent = `${formatPositionSummary(position)} · ${message}`;
+      setStatus(message, true);
+      return null;
     }
     return state.position;
   } catch (error) {
@@ -295,6 +308,19 @@ function showLocationError(error) {
 
   elements.locationSummary.textContent = message;
   setStatus(message, true);
+}
+
+async function setManualPosition(position, name) {
+  state.position = position;
+  elements.locationButton.textContent = "위치 갱신";
+  elements.locationSummary.textContent = `기준 위치: ${name} · 위도 ${position.latitude.toFixed(5)}, 경도 ${position.longitude.toFixed(5)}`;
+  enableSearch();
+
+  if (state.selectedBook) {
+    await loadLibrariesForSelectedBook();
+  } else {
+    await loadNearestLibraries();
+  }
 }
 
 function formatPositionSummary(position) {
