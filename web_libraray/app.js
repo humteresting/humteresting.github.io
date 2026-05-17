@@ -1,5 +1,6 @@
 const CONFIG = {
   workerBaseUrl: "https://YOUR_WORKER_SUBDOMAIN.workers.dev",
+  libraryCatalogUrl: "./libraries.json",
   libraryCacheTtlMs: 1000 * 60 * 60 * 24 * 7
 };
 
@@ -194,8 +195,18 @@ async function refreshLibraryCatalog() {
 }
 
 async function fetchLibraryCatalog() {
-  const data = await fetchJson("/libraries/catalog");
-  return data.items || [];
+  const response = await fetch(CONFIG.libraryCatalogUrl, { cache: "force-cache" });
+  const data = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    throw new Error("정적 도서관 DB를 불러오지 못했습니다.");
+  }
+
+  const items = data.items || [];
+  if (!items.length) {
+    throw new Error("정적 도서관 DB가 비어 있습니다. libraries.json을 갱신해 주세요.");
+  }
+  return items;
 }
 
 function warmLibraryCatalog() {

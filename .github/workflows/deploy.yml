@@ -45,6 +45,19 @@ jobs:
             git submodule update --init --recursive
           fi
 
+      - name: Generate near library database
+        shell: bash
+        env:
+          PUBLIC_LIBRARY_API_KEY: ${{ secrets.PUBLIC_LIBRARY_API_KEY }}
+        run: |
+          set -euo pipefail
+
+          if [ -n "${PUBLIC_LIBRARY_API_KEY}" ]; then
+            node web_libraray/scripts/update-libraries.mjs
+          else
+            echo "PUBLIC_LIBRARY_API_KEY secret is not set; using committed libraries.json"
+          fi
+
       - name: Build static site
         shell: bash
         run: |
@@ -73,6 +86,7 @@ jobs:
           cp web_libraray/index.html _site/web_libraray/index.html
           cp web_libraray/styles.css _site/web_libraray/styles.css
           cp web_libraray/app.js _site/web_libraray/app.js
+          cp web_libraray/libraries.json _site/web_libraray/libraries.json
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
