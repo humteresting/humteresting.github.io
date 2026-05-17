@@ -23,7 +23,7 @@ for (const candidate of serviceKeyCandidates) {
     items.push(
       ...rawItems
         .map(normalizeLibrary)
-        .filter((library) => library.name && Number.isFinite(library.latitude) && Number.isFinite(library.longitude))
+        .filter((library) => library.name && hasKoreaCoordinate(library))
     );
 
     if (rawItems.length < pageSize) break;
@@ -110,6 +110,17 @@ function dedupeLibraries(libraries) {
     map.set(library.id, library);
   });
   return [...map.values()];
+}
+
+function hasKoreaCoordinate(library) {
+  return (
+    Number.isFinite(library.latitude) &&
+    Number.isFinite(library.longitude) &&
+    library.latitude >= 32 &&
+    library.latitude <= 39.5 &&
+    library.longitude >= 123 &&
+    library.longitude <= 133
+  );
 }
 
 function clean(value) {

@@ -5,7 +5,7 @@ const CONFIG = {
 };
 
 const DB_NAME = "nearLibrary";
-const DB_VERSION = 1;
+const DB_VERSION = 2;
 const LIBRARY_STORE = "libraries";
 const META_STORE = "meta";
 const LIBRARY_CACHE_KEY = "libraryCatalogUpdatedAt";
@@ -206,7 +206,18 @@ async function fetchLibraryCatalog() {
   if (!items.length) {
     throw new Error("정적 도서관 DB가 비어 있습니다. libraries.json을 갱신해 주세요.");
   }
-  return items;
+  return items.filter(hasKoreaCoordinate);
+}
+
+function hasKoreaCoordinate(library) {
+  return (
+    Number.isFinite(library.latitude) &&
+    Number.isFinite(library.longitude) &&
+    library.latitude >= 32 &&
+    library.latitude <= 39.5 &&
+    library.longitude >= 123 &&
+    library.longitude <= 133
+  );
 }
 
 function warmLibraryCatalog() {
@@ -246,7 +257,10 @@ async function ensurePosition(force = false) {
       longitude: position.coords.longitude
     };
     elements.locationButton.textContent = "위치 갱신";
-    elements.locationSummary.textContent = `인지한 위치: 위도 ${state.position.latitude.toFixed(5)}, 경도 ${state.position.longitude.toFixed(5)}`;
+    elements.locationSummary.textContent = formatPositionSummary(position);
+    if (!isLikelyKoreaPosition(state.position)) {
+      setStatus("인지한 위치가 한국 범위를 벗어나 가까운 도서관 계산이 부정확할 수 있습니다.", true);
+    }
     return state.position;
   } catch (error) {
     elements.locationButton.textContent = "위치 설정";
@@ -281,6 +295,21 @@ function showLocationError(error) {
 
   elements.locationSummary.textContent = message;
   setStatus(message, true);
+}
+
+function formatPositionSummary(position) {
+  const { latitude, longitude, accuracy } = position.coords;
+  const accuracyText = Number.isFinite(accuracy) ? `, 정확도 약 ${Math.round(accuracy)}m` : "";
+  return `인지한 위치: 위도 ${latitude.toFixed(5)}, 경도 ${longitude.toFixed(5)}${accuracyText}`;
+}
+
+function isLikelyKoreaPosition(position) {
+  return (
+    position.latitude >= 32 &&
+    position.latitude <= 39.5 &&
+    position.longitude >= 123 &&
+    position.longitude <= 133
+  );
 }
 
 function addDistance(library, position) {
@@ -378,6 +407,9 @@ function openDb() {
     const request = indexedDB.open(DB_NAME, DB_VERSION);
     request.onupgradeneeded = () => {
       const db = request.result;
+      if (db.objectStoreNames.contains(LIBRARY_STORE)) {
+        db.deleteObjectStore(LIBRARY_STORE);
+      }
       if (!db.objectStoreNames.contains(LIBRARY_STORE)) {
         db.createObjectStore(LIBRARY_STORE, { keyPath: "id" });
       }
