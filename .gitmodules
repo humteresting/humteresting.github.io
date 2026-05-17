@@ -5,3 +5,7 @@
 [submodule "web_value_worldcup"]
     path = web_value_worldcup
     url = https://github.com/humteresting/web_value_worldcup.git
+
+[submodule "web_libraray"]
+    path = web_libraray
+    url = https://github.com/humteresting/web_nearlibrary.git
