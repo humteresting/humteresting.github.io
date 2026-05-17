@@ -53,7 +53,7 @@ jobs:
           set -euo pipefail
 
           if [ -n "${PUBLIC_LIBRARY_API_KEY}" ]; then
-            node web_libraray/scripts/update-libraries.mjs
+            node web_libraray/scripts/update-libraries.mjs || echo "Library DB generation failed; using committed libraries.json"
           else
             echo "PUBLIC_LIBRARY_API_KEY secret is not set; using committed libraries.json"
           fi

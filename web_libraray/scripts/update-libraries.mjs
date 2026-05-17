@@ -13,6 +13,7 @@ const serviceKeyCandidates = [...new Set([serviceKey, decodeURIComponent(service
 const items = [];
 const pageSize = 1000;
 const maxPages = 30;
+const maxRetries = 4;
 
 for (const candidate of serviceKeyCandidates) {
   items.length = 0;
@@ -51,17 +52,33 @@ async function fetchLibraryPage(key, pageNo, pageSize) {
   url.searchParams.set("pageNo", String(pageNo));
   url.searchParams.set("numOfRows", String(pageSize));
 
-  const response = await fetch(url);
-  const text = await response.text();
-  if (!response.ok) {
-    throw new Error(`도서관 API 요청 실패: ${response.status} ${text.slice(0, 160)}`);
+  let lastError;
+  for (let attempt = 1; attempt <= maxRetries; attempt += 1) {
+    try {
+      const response = await fetch(url);
+      const text = await response.text();
+      if (!response.ok) {
+        throw new Error(`도서관 API 요청 실패: ${response.status} ${text.slice(0, 160)}`);
+      }
+
+      try {
+        return JSON.parse(text);
+      } catch {
+        throw new Error(`도서관 API가 JSON이 아닌 응답을 반환했습니다: ${text.slice(0, 160)}`);
+      }
+    } catch (error) {
+      lastError = error;
+      if (attempt < maxRetries) {
+        await sleep(700 * attempt);
+      }
+    }
   }
 
-  try {
-    return JSON.parse(text);
-  } catch {
-    throw new Error(`도서관 API가 JSON이 아닌 응답을 반환했습니다: ${text.slice(0, 160)}`);
-  }
+  throw lastError;
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function extractItems(payload) {
