@@ -26,11 +26,10 @@ const elements = {
   libraryResults: document.querySelector("#libraryResults"),
   selectedBookText: document.querySelector("#selectedBookText"),
   locationButton: document.querySelector("#locationButton"),
+  locationSummary: document.querySelector("#locationSummary"),
   bookTemplate: document.querySelector("#bookTemplate"),
   libraryTemplate: document.querySelector("#libraryTemplate")
 };
-
-warmLibraryCatalog();
 
 elements.searchForm.addEventListener("submit", async (event) => {
   event.preventDefault();
@@ -40,13 +39,23 @@ elements.searchForm.addEventListener("submit", async (event) => {
 });
 
 elements.locationButton.addEventListener("click", async () => {
-  await ensurePosition(true);
+  const position = await ensurePosition(true);
+  if (!position) return;
+
+  enableSearch();
   if (state.selectedBook) {
     await loadLibrariesForSelectedBook();
+  } else {
+    await loadNearestLibraries();
   }
 });
 
 async function searchBooks(query) {
+  if (!state.position) {
+    setStatus("위치 설정을 먼저 완료해 주세요.", true);
+    return;
+  }
+
   setStatus("도서를 검색하고 있습니다.");
   setLoading(elements.searchForm.querySelector("button"), true);
 
@@ -55,7 +64,7 @@ async function searchBooks(query) {
     state.books = data.items || [];
     state.selectedBook = null;
     renderBooks();
-    renderLibraryEmpty("책을 선택하면 즐겨찾기 도서관부터 빠르게 확인합니다.");
+    elements.selectedBookText.textContent = "책을 선택하면 즐겨찾기 도서관을 먼저 반영합니다.";
     setStatus(state.books.length ? `${state.books.length}건의 도서를 찾았습니다.` : "검색 결과가 없습니다.");
   } catch (error) {
     setStatus(error.message, true);
@@ -70,6 +79,25 @@ async function selectBook(book, button) {
   button.classList.add("active");
   elements.selectedBookText.textContent = book.title;
   await loadLibrariesForSelectedBook();
+}
+
+async function loadNearestLibraries() {
+  const position = await ensurePosition();
+  if (!position) {
+    renderLibraryEmpty("위치 권한을 허용하면 현재 위치 기준으로 정렬합니다.");
+    return;
+  }
+
+  renderLibraryEmpty("가까운 도서관을 불러오고 있습니다.");
+
+  try {
+    const allLibraries = await getLibrariesWithDistance(position);
+    state.libraries = prioritizeLibraries(allLibraries);
+    elements.selectedBookText.textContent = "현재 위치 기준 가까운 도서관입니다.";
+    renderLibraries("책을 검색하기 전에 가까운 도서관을 먼저 표시했습니다.");
+  } catch (error) {
+    renderLibraryEmpty(error.message);
+  }
 }
 
 async function loadLibrariesForSelectedBook() {
@@ -90,6 +118,7 @@ async function loadLibrariesForSelectedBook() {
 
     const allLibraries = await getLibrariesWithDistance(position);
     state.libraries = prioritizeLibraries(allLibraries);
+    elements.selectedBookText.textContent = `${state.selectedBook.title} 검색 후 가까운 도서관입니다.`;
     renderLibraries(
       favoriteLibraries.length
         ? "즐겨찾기 도서관을 먼저 보여준 뒤 전체 도서관을 거리순으로 정렬했습니다."
@@ -198,9 +227,11 @@ async function ensurePosition(force = false) {
       longitude: position.coords.longitude
     };
     elements.locationButton.textContent = "위치 갱신";
+    elements.locationSummary.textContent = `인지한 위치: 위도 ${state.position.latitude.toFixed(5)}, 경도 ${state.position.longitude.toFixed(5)}`;
     return state.position;
   } catch {
     elements.locationButton.textContent = "위치 설정";
+    elements.locationSummary.textContent = "위치를 확인하지 못했습니다. 브라우저 위치 권한을 확인해 주세요.";
     return null;
   } finally {
     elements.locationButton.disabled = false;
@@ -212,6 +243,13 @@ function addDistance(library, position) {
     ...library,
     distanceKm: haversineKm(position.latitude, position.longitude, library.latitude, library.longitude)
   };
+}
+
+function enableSearch() {
+  elements.query.disabled = false;
+  const button = elements.searchForm.querySelector("button");
+  button.disabled = false;
+  setStatus("가까운 도서관을 확인했습니다. 이제 책을 검색할 수 있습니다.");
 }
 
 function renderBooks() {

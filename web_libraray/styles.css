@@ -151,6 +151,21 @@ button:disabled {
   background: var(--accent-soft);
 }
 
+.location-control {
+  display: grid;
+  justify-items: end;
+  gap: 10px;
+  max-width: 360px;
+}
+
+.location-control p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.45;
+  text-align: right;
+}
+
 .status {
   min-height: 22px;
   margin: 16px 0 0;
@@ -163,9 +178,9 @@ button:disabled {
 
 .content-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(360px, 0.9fr);
+  grid-template-columns: minmax(360px, 0.9fr) minmax(0, 1fr);
   gap: 18px;
-  margin-top: 18px;
+  margin-bottom: 18px;
 }
 
 .list-section {
@@ -297,6 +312,15 @@ button:disabled {
   .app-header {
     display: grid;
     padding-top: 34px;
+  }
+
+  .location-control {
+    justify-items: start;
+    max-width: none;
+  }
+
+  .location-control p {
+    text-align: left;
   }
 
   h1 {

@@ -14,16 +14,41 @@
     <header class="app-header">
       <div>
         <p class="eyebrow">Public Library Finder</p>
-        <h1>책을 찾고, 가까운 도서관을 바로 확인하세요.</h1>
+        <h1>당신 근처의 도서관</h1>
       </div>
-      <button class="ghost-button" id="locationButton" type="button">위치 설정</button>
+      <div class="location-control">
+        <button class="ghost-button" id="locationButton" type="button">위치 설정</button>
+        <p id="locationSummary">위치를 설정하면 가까운 공공도서관을 먼저 보여드립니다.</p>
+      </div>
     </header>
 
     <main class="app-shell">
+      <section class="content-grid">
+        <div class="list-section library-section" aria-labelledby="libraryResultsTitle">
+          <div class="section-heading">
+            <h2 id="libraryResultsTitle">가까운 공공도서관</h2>
+            <p id="selectedBookText">위치를 설정하면 가까운 도서관부터 표시됩니다.</p>
+          </div>
+          <div id="libraryResults" class="library-list empty-state">
+            먼저 위치 설정을 눌러 현재 위치 기준의 도서관 목록을 확인하세요.
+          </div>
+        </div>
+
+        <div class="list-section" aria-labelledby="bookResultsTitle">
+          <div class="section-heading">
+            <h2 id="bookResultsTitle">검색 결과</h2>
+            <p>위치를 설정한 뒤 책을 검색하면 도서관 목록이 함께 갱신됩니다.</p>
+          </div>
+          <div id="bookResults" class="book-list empty-state">
+            위치를 설정한 뒤 도서명, 저자명, ISBN으로 검색해 보세요.
+          </div>
+        </div>
+      </section>
+
       <section class="search-panel" aria-labelledby="searchTitle">
         <div class="section-heading">
           <h2 id="searchTitle">도서 검색</h2>
-          <p>도서명, 저자명, ISBN으로 검색할 수 있습니다.</p>
+          <p>가까운 도서관을 확인한 다음 도서명, 저자명, ISBN으로 검색할 수 있습니다.</p>
         </div>
         <form id="searchForm" class="search-form">
           <label for="query">검색어</label>
@@ -34,34 +59,13 @@
               type="search"
               placeholder="예: 토지, 박경리, 978..."
               autocomplete="off"
+              disabled
               required
             >
-            <button type="submit">검색</button>
+            <button type="submit" disabled>검색</button>
           </div>
         </form>
-        <p class="status" id="searchStatus" role="status"></p>
-      </section>
-
-      <section class="content-grid">
-        <div class="list-section" aria-labelledby="bookResultsTitle">
-          <div class="section-heading">
-            <h2 id="bookResultsTitle">검색 결과</h2>
-            <p>책을 선택하면 주변 도서관 목록이 표시됩니다.</p>
-          </div>
-          <div id="bookResults" class="book-list empty-state">
-            검색어를 입력해 도서를 찾아보세요.
-          </div>
-        </div>
-
-        <div class="list-section" aria-labelledby="libraryResultsTitle">
-          <div class="section-heading">
-            <h2 id="libraryResultsTitle">가까운 공공도서관</h2>
-            <p id="selectedBookText">선택된 도서가 없습니다.</p>
-          </div>
-          <div id="libraryResults" class="library-list empty-state">
-            책을 선택하고 위치 사용을 허용하면 가까운 도서관을 볼 수 있습니다.
-          </div>
-        </div>
+        <p class="status" id="searchStatus" role="status">위치 설정을 먼저 완료해 주세요.</p>
       </section>
     </main>
 
