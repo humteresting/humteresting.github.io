@@ -368,6 +368,33 @@
       font-weight: 750;
     }
 
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .stat-card {
+      padding: 12px 14px;
+      background: rgba(255, 250, 246, 0.86);
+      border: 1px solid var(--line);
+      border-radius: 8px;
+    }
+
+    .stat-card strong {
+      display: block;
+      font-size: 24px;
+      color: var(--ink);
+      line-height: 1.1;
+    }
+
+    .stat-card span {
+      color: var(--muted);
+      font-size: 13px;
+      font-weight: 750;
+    }
+
     .path-line {
       display: flex;
       align-items: center;
@@ -992,6 +1019,7 @@
               <input name="q" autocomplete="off" placeholder="책 제목, 저자, ISBN으로 검색" />
               <button class="primary" type="submit">검색</button>
             </form>
+            <div id="homeStats" class="stats-grid"></div>
           </div>
           <div class="mesh-preview" aria-label="독서 그래프 미리보기">
             <svg id="homeGraphSvg" viewBox="0 0 1000 620" role="img" aria-label="인기 책 중심 그래프"></svg>
@@ -1597,6 +1625,15 @@
       return true;
     }
 
+    function updateSavedBookButtons(bookId) {
+      $all(`[data-book-action="save"][data-book-id="${escapeSelectorValue(bookId)}"]`).forEach((button) => {
+        button.textContent = "내 책";
+      });
+      $all(`[data-save-read-book="${escapeSelectorValue(bookId)}"]`).forEach((button) => {
+        button.textContent = "내 읽은 책";
+      });
+    }
+
     function hydrateSeedData() {
       purgeLegacySampleData();
       const seedVersion = "2026-05-10-no-sample-data";
@@ -2042,13 +2079,20 @@
     }
 
     function renderHome() {
+      const aggregates = aggregateEdges();
+      const totalBooks = state.books.filter((book) => !isLegacySampleBook(book)).length;
+      const totalEdges = aggregates.reduce((sum, edge) => sum + edge.count, 0);
+      $("#homeStats").innerHTML = `
+        <div class="stat-card"><strong>${totalBooks}</strong><span>전체 책수</span></div>
+        <div class="stat-card"><strong>${totalEdges}</strong><span>전체 가지 수</span></div>
+      `;
       const recent = [...state.edges]
         .sort((a, b) => b.createdAt - a.createdAt)
         .slice(0, 6)
         .map((item) => renderPathCard(item))
         .join("");
       $("#recentPaths").innerHTML = recent || `<div class="empty">아직 추가된 경로가 없습니다.</div>`;
-      const popular = aggregateEdges();
+      const popular = aggregates;
       $("#popularPaths").innerHTML = popular.slice(0, 6).map((item) => renderPathCard(item)).join("") || `<div class="empty">아직 인기 연결이 없습니다.</div>`;
       renderHomeGraph(popular);
     }
@@ -2205,6 +2249,23 @@
 
     function uniqueBooks(books) {
       return mergeSearchResults([], books);
+    }
+
+    function recentBookScore(book) {
+      const bookTime = Number(book?.updatedAt || book?.createdAt || 0);
+      const edgeTime = state.edges.reduce((latest, edge) => {
+        if (edge.fromBookId !== book.id && edge.toBookId !== book.id) return latest;
+        return Math.max(latest, Number(edge.createdAt || 0));
+      }, 0);
+      return Math.max(bookTime, edgeTime);
+    }
+
+    function recentBookSuggestions(excludeBookId = "", limitCount = 8) {
+      return state.books
+        .filter((book) => book.id !== excludeBookId && !isLegacySampleBook(book))
+        .slice()
+        .sort((a, b) => recentBookScore(b) - recentBookScore(a) || a.title.localeCompare(b.title, "ko"))
+        .slice(0, limitCount);
     }
 
     function showSearchFallbackMessage(failures, fallbackMessage) {
@@ -2635,6 +2696,7 @@
             </div>
           </div>
         </div>
+        ${renderMyBookConnections(book.id)}
         <div class="section split">
           <div class="card">
             <h3>이 책 다음에 많이 읽은 책</h3>
@@ -2651,6 +2713,34 @@
         </div>
       `;
       ensureAladinBookData(book.id);
+    }
+
+    function renderMyBookConnections(bookId) {
+      if (!currentUser.signedIn) return "";
+      const myOutgoing = state.edges
+        .filter((edge) => edge.userId === currentUser.id && edge.fromBookId === bookId)
+        .sort((a, b) => b.createdAt - a.createdAt);
+      const myIncoming = state.edges
+        .filter((edge) => edge.userId === currentUser.id && edge.toBookId === bookId)
+        .sort((a, b) => b.createdAt - a.createdAt);
+      if (!myOutgoing.length && !myIncoming.length) return "";
+      const line = (edge, bookKey, label) => {
+        const book = getBook(edge[bookKey]);
+        if (!book) return "";
+        return `
+          <div class="connection">
+            <span class="meta">${label}</span>
+            <button class="ghost" data-open-book="${book.id}">${escapeHtml(book.title)}</button>
+          </div>
+        `;
+      };
+      return `
+        <div class="section card">
+          <h3>내가 연결한 책</h3>
+          ${myIncoming.map((edge) => line(edge, "fromBookId", "이전에 읽음")).join("")}
+          ${myOutgoing.map((edge) => line(edge, "toBookId", "다음에 읽음")).join("")}
+        </div>
+      `;
     }
 
     function renderComments(bookId) {
@@ -3584,8 +3674,71 @@
           </label>
           <button class="secondary" type="submit">저장</button>
         </form>
+        <div class="actions">
+          <button class="secondary" type="button" data-export-markdown>내책지도 Markdown 추출</button>
+        </div>
       ` : "";
       $("#myPaths").innerHTML = myEdges.map((item) => renderPathCard(item, true)).join("") || `<div class="empty">아직 내가 추가한 독서 경로가 없습니다.</div>`;
+    }
+
+    function buildMyBookMapMarkdown() {
+      const myBookIds = new Set(state.userBookIds);
+      state.edges
+        .filter((edge) => edge.userId === currentUser.id)
+        .forEach((edge) => {
+          myBookIds.add(edge.fromBookId);
+          myBookIds.add(edge.toBookId);
+        });
+      const myBooks = [...myBookIds].map(getBook).filter(Boolean)
+        .sort((a, b) => a.title.localeCompare(b.title, "ko"));
+      const myEdges = state.edges
+        .filter((edge) => edge.userId === currentUser.id)
+        .sort((a, b) => b.createdAt - a.createdAt);
+      const lines = [
+        "# 내책지도",
+        "",
+        `- 톡토로명: ${currentUser.nickname || currentUser.displayName || currentUser.email || ""}`,
+        `- 추출일: ${new Date().toLocaleString("ko-KR")}`,
+        `- 책: ${myBooks.length}권`,
+        `- 가지: ${myEdges.length}개`,
+        "",
+        "## 읽은 책",
+        ...myBooks.map((book) => {
+          const creators = (book.authors || []).join(", ");
+          const isbn = book.isbn13 || book.isbn10 || "";
+          return `- ${book.title}${creators ? ` - ${creators}` : ""}${isbn ? ` (${isbn})` : ""}`;
+        }),
+        "",
+        "## 독서 경로",
+        ...(
+          myEdges.length
+            ? myEdges.map((edge) => {
+                const from = getBook(edge.fromBookId);
+                const to = getBook(edge.toBookId);
+                return `- ${from?.title || edge.fromBookId} -> ${to?.title || edge.toBookId}`;
+              })
+            : ["- 아직 추가한 독서 경로가 없습니다."]
+        )
+      ];
+      return `${lines.join("\n")}\n`;
+    }
+
+    function exportMyBookMapMarkdown() {
+      if (!currentUser.signedIn) {
+        showToast("로그인하면 내책지도를 추출할 수 있습니다.");
+        return;
+      }
+      const blob = new Blob([buildMyBookMapMarkdown()], { type: "text/markdown;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      const date = new Date().toISOString().slice(0, 10);
+      link.href = url;
+      link.download = `bookmesh-my-map-${date}.md`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      URL.revokeObjectURL(url);
+      showToast("내책지도를 Markdown으로 추출했습니다.");
     }
 
     function openModal(bookId, direction = "next") {
@@ -3599,7 +3752,8 @@
       $("#bookModalTitle").textContent = direction === "next" ? "다음에 읽은 책 추가" : "전에 읽은 책 추가";
       $("#bookModal").classList.add("active");
       $("#bookModal").setAttribute("aria-hidden", "false");
-      $("#modalResults").innerHTML = state.books.slice(0, 8).map((book) => renderBookCard(book, "connect")).join("");
+      $("#modalResults").innerHTML = recentBookSuggestions(bookId).map((book) => renderBookCard(book, "connect")).join("") ||
+        `<div class="empty">연결할 책을 검색해 주세요.</div>`;
     }
 
     function closeModal() {
@@ -3704,6 +3858,11 @@
         return;
       }
 
+      if (event.target.closest("[data-export-markdown]")) {
+        exportMyBookMapMarkdown();
+        return;
+      }
+
       const bookAction = event.target.closest("[data-book-action]");
       if (bookAction) {
         const existingBook = getBook(bookAction.dataset.bookId);
@@ -3726,8 +3885,9 @@
             showError("내 책 저장에 실패했습니다.", error, "userBooks/write");
             return;
           }
-          handleSearch($("#searchPage [data-search-form]"), "#searchResults");
+          updateSavedBookButtons(candidate.id);
           renderHome();
+          renderGraphSuggestions();
           return;
         }
         state.selectedBookId = candidate.id;
