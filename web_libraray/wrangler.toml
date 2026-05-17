@@ -1,0 +1,8 @@
+name = "web-libraray-api"
+main = "worker.js"
+compatibility_date = "2026-05-17"
+
+[vars]
+# Set secrets with:
+# wrangler secret put PUBLIC_LIBRARY_API_KEY
+# wrangler secret put NL_API_KEY

@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>공공도서관 도서 검색</title>
+    <meta
+      name="description"
+      content="도서를 검색하고 현재 위치에서 가까운 공공도서관을 거리순으로 확인하세요."
+    >
+    <link rel="stylesheet" href="./styles.css">
+  </head>
+  <body>
+    <header class="app-header">
+      <div>
+        <p class="eyebrow">Public Library Finder</p>
+        <h1>책을 찾고, 가까운 도서관을 바로 확인하세요.</h1>
+      </div>
+      <button class="ghost-button" id="locationButton" type="button">위치 설정</button>
+    </header>
+
+    <main class="app-shell">
+      <section class="search-panel" aria-labelledby="searchTitle">
+        <div class="section-heading">
+          <h2 id="searchTitle">도서 검색</h2>
+          <p>도서명, 저자명, ISBN으로 검색할 수 있습니다.</p>
+        </div>
+        <form id="searchForm" class="search-form">
+          <label for="query">검색어</label>
+          <div class="search-row">
+            <input
+              id="query"
+              name="query"
+              type="search"
+              placeholder="예: 토지, 박경리, 978..."
+              autocomplete="off"
+              required
+            >
+            <button type="submit">검색</button>
+          </div>
+        </form>
+        <p class="status" id="searchStatus" role="status"></p>
+      </section>
+
+      <section class="content-grid">
+        <div class="list-section" aria-labelledby="bookResultsTitle">
+          <div class="section-heading">
+            <h2 id="bookResultsTitle">검색 결과</h2>
+            <p>책을 선택하면 주변 도서관 목록이 표시됩니다.</p>
+          </div>
+          <div id="bookResults" class="book-list empty-state">
+            검색어를 입력해 도서를 찾아보세요.
+          </div>
+        </div>
+
+        <div class="list-section" aria-labelledby="libraryResultsTitle">
+          <div class="section-heading">
+            <h2 id="libraryResultsTitle">가까운 공공도서관</h2>
+            <p id="selectedBookText">선택된 도서가 없습니다.</p>
+          </div>
+          <div id="libraryResults" class="library-list empty-state">
+            책을 선택하고 위치 사용을 허용하면 가까운 도서관을 볼 수 있습니다.
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <template id="bookTemplate">
+      <button class="book-item" type="button">
+        <span class="book-title"></span>
+        <span class="book-meta"></span>
+        <span class="book-isbn"></span>
+      </button>
+    </template>
+
+    <template id="libraryTemplate">
+      <article class="library-item">
+        <div>
+          <h3></h3>
+          <p class="library-address"></p>
+          <p class="library-contact"></p>
+        </div>
+        <div class="library-actions">
+          <span class="distance-badge"></span>
+          <button class="favorite-button" type="button" aria-pressed="false"></button>
+        </div>
+      </article>
+    </template>
+
+    <script src="./app.js" defer></script>
+  </body>
+</html>
