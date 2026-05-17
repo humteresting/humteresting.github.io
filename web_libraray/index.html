@@ -28,6 +28,19 @@
           <button type="button" data-lat="35.1595" data-lng="126.8526">광주</button>
           <button type="button" data-lat="33.4996" data-lng="126.5312">제주</button>
         </div>
+        <form id="libraryAnchorForm" class="library-anchor-form">
+          <label for="libraryAnchorQuery">도서관 기준 위치 찾기</label>
+          <div>
+            <input
+              id="libraryAnchorQuery"
+              type="search"
+              placeholder="예: 정독도서관, 강남구"
+              autocomplete="off"
+            >
+            <button type="submit">찾기</button>
+          </div>
+        </form>
+        <div id="libraryAnchorResults" class="library-anchor-results" aria-live="polite"></div>
       </div>
     </header>
 

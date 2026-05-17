@@ -155,7 +155,7 @@ button:disabled {
   display: grid;
   justify-items: end;
   gap: 10px;
-  max-width: 360px;
+  max-width: 460px;
 }
 
 .location-control p {
@@ -185,6 +185,69 @@ button:disabled {
 .location-presets button:hover {
   border-color: var(--accent);
   background: var(--accent-soft);
+}
+
+.library-anchor-form {
+  display: grid;
+  width: min(460px, 100%);
+  gap: 7px;
+}
+
+.library-anchor-form label {
+  color: var(--muted);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.library-anchor-form div {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 6px;
+}
+
+.library-anchor-form input {
+  padding: 9px 10px;
+}
+
+.library-anchor-form button {
+  padding: 9px 12px;
+}
+
+.library-anchor-results {
+  display: grid;
+  width: min(460px, 100%);
+  gap: 6px;
+}
+
+.anchor-result-button {
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--ink);
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.anchor-result-button:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.anchor-result-button span {
+  color: var(--muted);
+  font-size: 0.8rem;
+  font-weight: 400;
+  line-height: 1.35;
+}
+
+.anchor-empty {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.86rem;
+  line-height: 1.45;
+  text-align: right;
 }
 
 .status {
@@ -346,6 +409,10 @@ button:disabled {
 
   .location-presets {
     justify-content: flex-start;
+  }
+
+  .anchor-empty {
+    text-align: left;
   }
 
   h1 {

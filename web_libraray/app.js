@@ -29,6 +29,9 @@ const elements = {
   locationButton: document.querySelector("#locationButton"),
   locationSummary: document.querySelector("#locationSummary"),
   locationPresets: document.querySelectorAll(".location-presets button"),
+  libraryAnchorForm: document.querySelector("#libraryAnchorForm"),
+  libraryAnchorQuery: document.querySelector("#libraryAnchorQuery"),
+  libraryAnchorResults: document.querySelector("#libraryAnchorResults"),
   bookTemplate: document.querySelector("#bookTemplate"),
   libraryTemplate: document.querySelector("#libraryTemplate")
 };
@@ -59,6 +62,15 @@ elements.locationPresets.forEach((button) => {
     const name = button.textContent.trim();
     await setManualPosition({ latitude: lat, longitude: lng }, name);
   });
+});
+
+elements.libraryAnchorForm.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  try {
+    await searchAnchorLibraries(elements.libraryAnchorQuery.value.trim());
+  } catch (error) {
+    renderAnchorEmpty(error.message || "도서관 기준 위치 검색 중 오류가 발생했습니다.");
+  }
 });
 
 async function searchBooks(query) {
@@ -321,6 +333,61 @@ async function setManualPosition(position, name) {
   } else {
     await loadNearestLibraries();
   }
+}
+
+async function searchAnchorLibraries(query) {
+  elements.libraryAnchorResults.replaceChildren();
+  if (!query) return;
+
+  let matches = [];
+  try {
+    const catalog = await getLibraryCatalog({ allowStale: true });
+    const normalizedQuery = normalizeSearchText(query);
+    matches = catalog
+      .filter((library) => {
+        const haystack = normalizeSearchText(`${library.name} ${library.address}`);
+        return haystack.includes(normalizedQuery);
+      })
+      .slice(0, 6);
+  } catch (error) {
+    renderAnchorEmpty(error.message);
+    return;
+  }
+
+  if (!matches.length) {
+    renderAnchorEmpty("일치하는 도서관을 찾지 못했습니다.");
+    return;
+  }
+
+  matches.forEach((library) => {
+    const button = document.createElement("button");
+    button.className = "anchor-result-button";
+    button.type = "button";
+    button.innerHTML = `<strong></strong><span></span>`;
+    button.querySelector("strong").textContent = library.name;
+    button.querySelector("span").textContent = library.address || "주소 정보 없음";
+    button.addEventListener("click", async () => {
+      elements.libraryAnchorResults.replaceChildren();
+      await setManualPosition(
+        { latitude: library.latitude, longitude: library.longitude },
+        library.name
+      );
+    });
+    elements.libraryAnchorResults.append(button);
+  });
+}
+
+function renderAnchorEmpty(message) {
+  const empty = document.createElement("p");
+  empty.className = "anchor-empty";
+  empty.textContent = message;
+  elements.libraryAnchorResults.replaceChildren(empty);
+}
+
+function normalizeSearchText(value) {
+  return String(value || "")
+    .toLowerCase()
+    .replace(/\s+/g, "");
 }
 
 function formatPositionSummary(position) {
