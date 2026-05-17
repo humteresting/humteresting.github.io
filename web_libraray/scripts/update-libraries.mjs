@@ -9,27 +9,30 @@ if (!serviceKey) {
   process.exit(1);
 }
 
+const serviceKeyCandidates = [...new Set([serviceKey, decodeURIComponent(serviceKey)])];
 const items = [];
 const pageSize = 1000;
 const maxPages = 30;
 
-for (let pageNo = 1; pageNo <= maxPages; pageNo += 1) {
-  const url = new URL(endpoint);
-  url.searchParams.set("serviceKey", serviceKey);
-  url.searchParams.set("type", "json");
-  url.searchParams.set("pageNo", String(pageNo));
-  url.searchParams.set("numOfRows", String(pageSize));
+for (const candidate of serviceKeyCandidates) {
+  items.length = 0;
+  for (let pageNo = 1; pageNo <= maxPages; pageNo += 1) {
+    const payload = await fetchLibraryPage(candidate, pageNo, pageSize);
+    const rawItems = extractItems(payload);
+    items.push(
+      ...rawItems
+        .map(normalizeLibrary)
+        .filter((library) => library.name && Number.isFinite(library.latitude) && Number.isFinite(library.longitude))
+    );
 
-  const response = await fetch(url);
-  if (!response.ok) {
-    throw new Error(`도서관 API 요청 실패: ${response.status}`);
+    if (rawItems.length < pageSize) break;
   }
 
-  const payload = await response.json();
-  const rawItems = asArray(payload.response?.body?.items || payload.items || payload.PublicLibraryInfo || []);
-  items.push(...rawItems.map(normalizeLibrary).filter((library) => library.name && Number.isFinite(library.latitude) && Number.isFinite(library.longitude)));
+  if (items.length) break;
+}
 
-  if (rawItems.length < pageSize) break;
+if (!items.length) {
+  throw new Error("도서관 API에서 유효한 도서관 데이터를 받지 못했습니다.");
 }
 
 const body = {
@@ -40,6 +43,31 @@ const body = {
 
 await writeFile(outputPath, `${JSON.stringify(body, null, 2)}\n`, "utf8");
 console.log(`Saved ${body.items.length} libraries to ${outputPath.pathname}`);
+
+async function fetchLibraryPage(key, pageNo, pageSize) {
+  const url = new URL(endpoint);
+  url.searchParams.set("serviceKey", key);
+  url.searchParams.set("type", "json");
+  url.searchParams.set("pageNo", String(pageNo));
+  url.searchParams.set("numOfRows", String(pageSize));
+
+  const response = await fetch(url);
+  const text = await response.text();
+  if (!response.ok) {
+    throw new Error(`도서관 API 요청 실패: ${response.status} ${text.slice(0, 160)}`);
+  }
+
+  try {
+    return JSON.parse(text);
+  } catch {
+    throw new Error(`도서관 API가 JSON이 아닌 응답을 반환했습니다: ${text.slice(0, 160)}`);
+  }
+}
+
+function extractItems(payload) {
+  const body = payload.response?.body;
+  return asArray(body?.items || payload.items || payload.PublicLibraryInfo || []);
+}
 
 function normalizeLibrary(item) {
   const lat = Number(item.latitude || item.lat || item.LATITUDE);
