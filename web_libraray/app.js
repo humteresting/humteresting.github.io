@@ -96,7 +96,7 @@ async function loadNearestLibraries() {
     elements.selectedBookText.textContent = "현재 위치 기준 가까운 도서관입니다.";
     renderLibraries("책을 검색하기 전에 가까운 도서관을 먼저 표시했습니다.");
   } catch (error) {
-    renderLibraryEmpty(error.message);
+    renderLibraryEmpty(`위치는 설정되었습니다. 도서관 목록을 불러오는 중 문제가 발생했습니다: ${error.message}`);
   }
 }
 
@@ -125,7 +125,7 @@ async function loadLibrariesForSelectedBook() {
         : "전체 도서관을 거리순으로 정렬했습니다."
     );
   } catch (error) {
-    renderLibraryEmpty(error.message);
+    renderLibraryEmpty(`위치는 설정되었습니다. 도서관 목록을 불러오는 중 문제가 발생했습니다: ${error.message}`);
   }
 }
 
@@ -208,17 +208,25 @@ async function ensurePosition(force = false) {
   if (state.position && !force) return state.position;
   if (!navigator.geolocation) {
     setStatus("이 브라우저는 위치 기능을 지원하지 않습니다.", true);
+    elements.locationSummary.textContent = "현재 브라우저에서는 위치 설정을 사용할 수 없습니다.";
     return null;
   }
 
   elements.locationButton.disabled = true;
   elements.locationButton.textContent = "위치 확인 중";
+  elements.locationSummary.textContent = "브라우저의 위치 권한 요청을 허용해 주세요.";
+  setStatus("위치 설정 중입니다. Chrome 주소창 근처의 위치 권한 요청을 확인해 주세요.");
 
   try {
+    const permission = await getLocationPermissionState();
+    if (permission === "denied") {
+      throw new Error("LOCATION_PERMISSION_DENIED");
+    }
+
     const position = await new Promise((resolve, reject) => {
       navigator.geolocation.getCurrentPosition(resolve, reject, {
-        enableHighAccuracy: true,
-        timeout: 9000,
+        enableHighAccuracy: false,
+        timeout: 15000,
         maximumAge: 300000
       });
     });
@@ -229,13 +237,39 @@ async function ensurePosition(force = false) {
     elements.locationButton.textContent = "위치 갱신";
     elements.locationSummary.textContent = `인지한 위치: 위도 ${state.position.latitude.toFixed(5)}, 경도 ${state.position.longitude.toFixed(5)}`;
     return state.position;
-  } catch {
+  } catch (error) {
     elements.locationButton.textContent = "위치 설정";
-    elements.locationSummary.textContent = "위치를 확인하지 못했습니다. 브라우저 위치 권한을 확인해 주세요.";
+    showLocationError(error);
     return null;
   } finally {
     elements.locationButton.disabled = false;
   }
+}
+
+async function getLocationPermissionState() {
+  if (!navigator.permissions?.query) return null;
+  try {
+    const permission = await navigator.permissions.query({ name: "geolocation" });
+    return permission.state;
+  } catch {
+    return null;
+  }
+}
+
+function showLocationError(error) {
+  const code = error?.code;
+  let message = "위치를 확인하지 못했습니다. Chrome 위치 권한과 Windows 위치 서비스를 확인해 주세요.";
+
+  if (error?.message === "LOCATION_PERMISSION_DENIED" || code === 1) {
+    message = "위치 권한이 차단되어 있습니다. 주소창 왼쪽 사이트 설정에서 위치 권한을 허용한 뒤 다시 눌러 주세요.";
+  } else if (code === 2) {
+    message = "현재 위치를 계산하지 못했습니다. Windows 위치 서비스나 네트워크 연결 상태를 확인해 주세요.";
+  } else if (code === 3) {
+    message = "위치 확인 시간이 초과되었습니다. 잠시 후 다시 누르거나 Chrome 위치 권한을 확인해 주세요.";
+  }
+
+  elements.locationSummary.textContent = message;
+  setStatus(message, true);
 }
 
 function addDistance(library, position) {
